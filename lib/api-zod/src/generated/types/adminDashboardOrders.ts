@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AdminDashboardRevenueByMonthItem = {
-  month: string;
-  revenue: number;
+export type AdminDashboardOrders = {
+  total?: number;
+  pending?: number;
+  delivered?: number;
 };

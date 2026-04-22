@@ -44,6 +44,8 @@ export const ordersTable = pgTable("orders", {
     state: string;
     zipCode: string;
   }>().notNull(),
+  paymentMethod: text("payment_method").default("pix").notNull(),
+  paymentStatus: text("payment_status").default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

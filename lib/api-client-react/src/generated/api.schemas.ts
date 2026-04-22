@@ -137,6 +137,26 @@ export const OrderStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type OrderPaymentMethod =
+  (typeof OrderPaymentMethod)[keyof typeof OrderPaymentMethod];
+
+export const OrderPaymentMethod = {
+  pix: "pix",
+  credit_card: "credit_card",
+  debit_card: "debit_card",
+  boleto: "boleto",
+} as const;
+
+export type OrderPaymentStatus =
+  (typeof OrderPaymentStatus)[keyof typeof OrderPaymentStatus];
+
+export const OrderPaymentStatus = {
+  pending: "pending",
+  paid: "paid",
+  failed: "failed",
+  refunded: "refunded",
+} as const;
+
 export interface Address {
   street: string;
   number: string;
@@ -157,13 +177,26 @@ export interface Order {
   total: number;
   couponCode?: string | null;
   shippingAddress: Address;
+  paymentMethod?: OrderPaymentMethod;
+  paymentStatus?: OrderPaymentStatus;
   createdAt: string;
   updatedAt: string;
 }
 
+export type CreateOrderBodyPaymentMethod =
+  (typeof CreateOrderBodyPaymentMethod)[keyof typeof CreateOrderBodyPaymentMethod];
+
+export const CreateOrderBodyPaymentMethod = {
+  pix: "pix",
+  credit_card: "credit_card",
+  debit_card: "debit_card",
+  boleto: "boleto",
+} as const;
+
 export interface CreateOrderBody {
   shippingAddress: Address;
   couponCode?: string | null;
+  paymentMethod?: CreateOrderBodyPaymentMethod;
 }
 
 export interface Review {
@@ -267,21 +300,57 @@ export interface CouponValidation {
   message?: string | null;
 }
 
-export type AdminDashboardRevenueByMonthItem = {
-  month: string;
-  revenue: number;
+export type AdminDashboardProducts = {
+  total?: number;
+  active?: number;
+  lowStock?: number;
 };
 
-export type AdminDashboardOrdersByStatus = { [key: string]: number };
+export type AdminDashboardOrders = {
+  total?: number;
+  pending?: number;
+  delivered?: number;
+};
+
+export type AdminDashboardUsers = {
+  total?: number;
+};
+
+export type AdminDashboardRevenue = {
+  total?: number;
+  today?: number;
+  week?: number;
+};
+
+export type AdminDashboardCoupons = {
+  total?: number;
+  active?: number;
+};
+
+export type AdminDashboardRecentOrdersItem = {
+  id: number;
+  status: string;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
+  itemCount: number;
+};
+
+export type AdminDashboardSalesByDayItem = {
+  day: string;
+  total: number;
+  orders: number;
+};
 
 export interface AdminDashboard {
-  totalRevenue: number;
-  totalOrders: number;
-  totalUsers: number;
-  totalProducts: number;
-  recentOrders: Order[];
-  revenueByMonth: AdminDashboardRevenueByMonthItem[];
-  ordersByStatus: AdminDashboardOrdersByStatus;
+  products: AdminDashboardProducts;
+  orders: AdminDashboardOrders;
+  users: AdminDashboardUsers;
+  revenue: AdminDashboardRevenue;
+  coupons: AdminDashboardCoupons;
+  recentOrders: AdminDashboardRecentOrdersItem[];
+  salesByDay: AdminDashboardSalesByDayItem[];
 }
 
 export type ListProductsParams = {

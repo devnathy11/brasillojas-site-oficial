@@ -43,7 +43,11 @@ router.get("/products", async (req, res) => {
       conditions.push(ilike(productsTable.name, `%${search}%`));
     }
 
-    if (category) {
+    if (category === "ofertas") {
+      conditions.push(sql`${productsTable.originalPrice} IS NOT NULL AND ${productsTable.originalPrice} > ${productsTable.price}`);
+    } else if (category === "novidades") {
+      // Show recently created products (no DB filter, sort by newest)
+    } else if (category) {
       const cat = await db.query.categoriesTable.findFirst({ where: eq(categoriesTable.slug, category) });
       if (cat) conditions.push(eq(productsTable.categoryId, cat.id));
     }

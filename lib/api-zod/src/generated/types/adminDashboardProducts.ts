@@ -6,4 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type AdminDashboardOrdersByStatus = { [key: string]: number };
+export type AdminDashboardProducts = {
+  total?: number;
+  active?: number;
+  lowStock?: number;
+};

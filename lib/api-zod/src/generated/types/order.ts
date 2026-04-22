@@ -7,6 +7,8 @@
  */
 import type { Address } from "./address";
 import type { OrderItem } from "./orderItem";
+import type { OrderPaymentMethod } from "./orderPaymentMethod";
+import type { OrderPaymentStatus } from "./orderPaymentStatus";
 import type { OrderStatus } from "./orderStatus";
 
 export interface Order {
@@ -19,6 +21,8 @@ export interface Order {
   total: number;
   couponCode?: string | null;
   shippingAddress: Address;
+  paymentMethod?: OrderPaymentMethod;
+  paymentStatus?: OrderPaymentStatus;
   createdAt: string;
   updatedAt: string;
 }

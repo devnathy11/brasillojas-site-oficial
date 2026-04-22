@@ -26,6 +26,8 @@ function mapOrder(order: typeof ordersTable.$inferSelect) {
     total: Number(order.total),
     couponCode: order.couponCode,
     shippingAddress: order.shippingAddress,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
   };
@@ -81,7 +83,7 @@ router.post("/orders", async (req, res) => {
   if (!userId) return;
 
   try {
-    const { shippingAddress, couponCode } = req.body;
+    const { shippingAddress, couponCode, paymentMethod = "pix" } = req.body;
 
     // Get cart items
     const cartItems = await db
@@ -120,15 +122,25 @@ router.post("/orders", async (req, res) => {
 
     const total = Math.max(0, subtotal - discount);
 
+    // Simulated payment processing: PIX & boleto stay pending until "confirmed",
+    // card payments are auto-approved instantly (sandbox).
+    const validMethods = ["pix", "credit_card", "debit_card", "boleto"];
+    const method = validMethods.includes(paymentMethod) ? paymentMethod : "pix";
+    const paymentStatus =
+      method === "credit_card" || method === "debit_card" ? "paid" : "pending";
+    const orderStatus = paymentStatus === "paid" ? "confirmed" : "pending";
+
     const [order] = await db.insert(ordersTable).values({
       userId,
-      status: "pending",
+      status: orderStatus,
       items,
       subtotal: subtotal.toFixed(2),
       discount: discount.toFixed(2),
       total: total.toFixed(2),
       couponCode: couponCodeApplied ?? null,
       shippingAddress,
+      paymentMethod: method,
+      paymentStatus,
     }).returning();
 
     // Clear cart

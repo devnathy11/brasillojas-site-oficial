@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { LayoutDashboard, Package, ShoppingBag, Tag, Menu, X, LogOut, ChevronRight } from "lucide-react";
+import { Logo } from "./Logo";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -35,9 +36,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#1B5E20] transform transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:relative lg:translate-x-0 lg:flex lg:flex-col flex-shrink-0`}>
         <div className="flex items-center justify-between p-5 border-b border-green-700">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
-              <span className="text-[#1B5E20] font-bold text-sm">BL</span>
-            </div>
+            <Logo size={40} />
             <div>
               <p className="text-white font-bold text-sm">BrasilLojas</p>
               <p className="text-green-200 text-xs">Painel Admin</p>

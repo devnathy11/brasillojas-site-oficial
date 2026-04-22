@@ -358,6 +358,10 @@ export const ListOrdersResponseItem = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
+  paymentMethod: zod
+    .enum(["pix", "credit_card", "debit_card", "boleto"])
+    .optional(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -377,6 +381,9 @@ export const CreateOrderBody = zod.object({
     zipCode: zod.string(),
   }),
   couponCode: zod.string().nullish(),
+  paymentMethod: zod
+    .enum(["pix", "credit_card", "debit_card", "boleto"])
+    .optional(),
 });
 
 /**
@@ -415,6 +422,10 @@ export const ListAllOrdersResponseItem = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
+  paymentMethod: zod
+    .enum(["pix", "credit_card", "debit_card", "boleto"])
+    .optional(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -460,6 +471,10 @@ export const GetOrderResponse = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
+  paymentMethod: zod
+    .enum(["pix", "credit_card", "debit_card", "boleto"])
+    .optional(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -653,53 +668,44 @@ export const ValidateCouponResponse = zod.object({
  * @summary Get admin dashboard stats
  */
 export const GetAdminDashboardResponse = zod.object({
-  totalRevenue: zod.number(),
-  totalOrders: zod.number(),
-  totalUsers: zod.number(),
-  totalProducts: zod.number(),
+  products: zod.object({
+    total: zod.number().optional(),
+    active: zod.number().optional(),
+    lowStock: zod.number().optional(),
+  }),
+  orders: zod.object({
+    total: zod.number().optional(),
+    pending: zod.number().optional(),
+    delivered: zod.number().optional(),
+  }),
+  users: zod.object({
+    total: zod.number().optional(),
+  }),
+  revenue: zod.object({
+    total: zod.number().optional(),
+    today: zod.number().optional(),
+    week: zod.number().optional(),
+  }),
+  coupons: zod.object({
+    total: zod.number().optional(),
+    active: zod.number().optional(),
+  }),
   recentOrders: zod.array(
     zod.object({
       id: zod.number(),
-      userId: zod.string(),
-      status: zod.enum([
-        "pending",
-        "confirmed",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled",
-      ]),
-      items: zod.array(
-        zod.object({
-          productId: zod.number(),
-          name: zod.string(),
-          imageUrl: zod.string(),
-          price: zod.number(),
-          quantity: zod.number(),
-        }),
-      ),
-      subtotal: zod.number(),
-      discount: zod.number(),
+      status: zod.string(),
       total: zod.number(),
-      couponCode: zod.string().nullish(),
-      shippingAddress: zod.object({
-        street: zod.string(),
-        number: zod.string(),
-        complement: zod.string().nullish(),
-        neighborhood: zod.string(),
-        city: zod.string(),
-        state: zod.string(),
-        zipCode: zod.string(),
-      }),
+      paymentMethod: zod.string(),
+      paymentStatus: zod.string(),
       createdAt: zod.string(),
-      updatedAt: zod.string(),
+      itemCount: zod.number(),
     }),
   ),
-  revenueByMonth: zod.array(
+  salesByDay: zod.array(
     zod.object({
-      month: zod.string(),
-      revenue: zod.number(),
+      day: zod.string(),
+      total: zod.number(),
+      orders: zod.number(),
     }),
   ),
-  ordersByStatus: zod.record(zod.string(), zod.number()),
 });

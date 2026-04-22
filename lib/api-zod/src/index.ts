@@ -1,2 +1,5 @@
 export * from "./generated/types";
-export { listProductsQueryPageDefault, listProductsQueryLimitDefault } from "./generated/api";
+export {
+  listProductsQueryPageDefault,
+  listProductsQueryLimitDefault,
+} from "./generated/api";

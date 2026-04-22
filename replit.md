@@ -70,3 +70,13 @@ Full Brazilian e-commerce platform built as a pnpm workspace monorepo. Two custo
 - Cart endpoint returns 401 for unauthenticated users (by design)
 - Product images use Unsplash URLs from seed data
 - Coupon codes: BEMVINDO10 (10%), FRETE0 (R$30 off), BLACK50 (50%)
+
+## Recent updates (Apr 2026)
+- Real category/banner images and brand logo (logo.jpg) wired into Header, Footer, AdminLayout, Home, Receipt.
+- Add-to-cart fixed (auth-aware, click event no longer hijacked by ProductCard Link wrapper).
+- Category filters fixed: `Ofertas` returns products with discount, `Novidades` returns recently created products.
+- Promo messaging changed from 50% to 10%.
+- Payment methods added in Cart.tsx: PIX (5% off), Cartão Crédito (1-12x), Cartão Débito, Boleto. Backend stores `payment_method`/`payment_status` on `orders` (drizzle push run). Card auto-approved in sandbox; PIX/boleto stay pending. Real card processing requires Stripe (paid plan).
+- Receipt page at `/receipt/:id` with auto window.print() after checkout (?print=1). Includes fake PIX copia-e-cola and boleto linha digitável.
+- Admin Dashboard expanded: revenue today/week, sales bar chart for last 7 days, recent orders list with status + payment badges.
+- API: `GET /admin/dashboard` now returns `recentOrders`, `salesByDay`, `revenue.today`, `revenue.week`. OpenAPI spec + client regenerated.

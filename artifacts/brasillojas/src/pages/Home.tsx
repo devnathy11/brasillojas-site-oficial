@@ -7,43 +7,50 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 
+import bannerOfertas from "@/assets/cat-ofertas.png";
+import bannerNovidades from "@/assets/cat-novidades.png";
+import bannerModa from "@/assets/banner-moda.png";
+import catMoveis from "@/assets/cat-moveis.png";
+import catRoupas from "@/assets/cat-roupas.png";
+import catCalcados from "@/assets/cat-calcados.png";
+import catNovidades from "@/assets/cat-novidades.png";
+import catOfertas from "@/assets/cat-ofertas.png";
+import catEletronicos from "@/assets/cat-eletronicos.png";
+
 const banners = [
   {
     id: 1,
-    title: "NOVAS COLEÇÕES.",
+    title: "NOVAS COLEÇÕES",
     subtitle: "SEU ESTILO. SUA CASA.",
     cta: "COMPRE AGORA",
     href: "/products?category=moveis",
-    bg: "from-[#1B5E20] to-[#2E7D32]",
-    textColor: "text-white",
+    image: bannerModa,
   },
   {
     id: 2,
-    title: "OFERTAS IMPERDÍVEIS.",
-    subtitle: "ATÉ 50% DE DESCONTO.",
+    title: "OFERTAS IMPERDÍVEIS",
+    subtitle: "10% DE DESCONTO",
     cta: "VER OFERTAS",
     href: "/products?category=ofertas",
-    bg: "from-[#7B1FA2] to-[#9C27B0]",
-    textColor: "text-white",
+    image: bannerOfertas,
   },
   {
     id: 3,
-    title: "MODA BRASILEIRA.",
-    subtitle: "ROUPAS E CALÇADOS.",
+    title: "NOVIDADES",
+    subtitle: "RECÉM CHEGADAS",
     cta: "EXPLORAR",
-    href: "/products?category=roupas",
-    bg: "from-[#1565C0] to-[#1976D2]",
-    textColor: "text-white",
+    href: "/products?category=novidades",
+    image: bannerNovidades,
   },
 ];
 
 const categoryGrid = [
-  { name: "Móveis", slug: "moveis", description: "Sofás, camas e mais" },
-  { name: "Roupas & Confecções", slug: "roupas", description: "Moda feminina e masculina" },
-  { name: "Calçados", slug: "calcados", description: "Tênis, sapatos e sandálias" },
-  { name: "Novidades", slug: "novidades", description: "Chegou agora" },
-  { name: "Ofertas", slug: "ofertas", description: "Até 50% off" },
-  { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets" },
+  { name: "Móveis", slug: "moveis", description: "Sofás, camas e mais", image: catMoveis },
+  { name: "Roupas & Confecções", slug: "roupas", description: "Moda feminina e masculina", image: catRoupas },
+  { name: "Calçados", slug: "calcados", description: "Tênis, sapatos e sandálias", image: catCalcados },
+  { name: "Novidades", slug: "novidades", description: "Chegou agora", image: catNovidades },
+  { name: "Ofertas", slug: "ofertas", description: "10% off em produtos selecionados", image: catOfertas },
+  { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets", image: catEletronicos },
 ];
 
 function HeroBanner() {
@@ -56,28 +63,36 @@ function HeroBanner() {
     return () => clearInterval(timer);
   }, []);
 
+  const banner = banners[current];
+
   return (
-    <div className="relative overflow-hidden rounded-none sm:rounded-lg h-56 sm:h-80 lg:h-96 mx-0 sm:mx-0">
+    <div className="relative overflow-hidden rounded-none sm:rounded-lg h-64 sm:h-96 lg:h-[28rem] mx-0 sm:mx-0">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
-          initial={{ opacity: 0, x: 60 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -60 }}
-          transition={{ duration: 0.4 }}
-          className={`absolute inset-0 bg-gradient-to-r ${banners[current].bg} flex items-center`}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0"
         >
-          <div className="max-w-7xl mx-auto px-8 w-full">
+          <img
+            src={banner.image}
+            alt={banner.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+          <div className="relative max-w-7xl mx-auto px-8 w-full h-full flex items-center">
             <div className="max-w-md">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold ${banners[current].textColor} leading-tight`}
+                className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight drop-shadow-lg"
               >
-                {banners[current].title}
+                {banner.title}
                 <br />
-                {banners[current].subtitle}
+                <span className="text-[#FFD54F]">{banner.subtitle}</span>
               </motion.h1>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -86,10 +101,10 @@ function HeroBanner() {
                 className="mt-6"
               >
                 <Link
-                  href={banners[current].href}
-                  className="inline-block bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold px-8 py-3 rounded-md transition-colors"
+                  href={banner.href}
+                  className="inline-block bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold px-8 py-3 rounded-md transition-colors shadow-lg"
                 >
-                  {banners[current].cta}
+                  {banner.cta}
                 </Link>
               </motion.div>
             </div>
@@ -100,19 +115,19 @@ function HeroBanner() {
       {/* Arrows */}
       <button
         onClick={() => setCurrent((c) => (c - 1 + banners.length) % banners.length)}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors z-10"
       >
         <ChevronLeft size={20} />
       </button>
       <button
         onClick={() => setCurrent((c) => (c + 1) % banners.length)}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors z-10"
       >
         <ChevronRight size={20} />
       </button>
 
       {/* Dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         {banners.map((_, i) => (
           <button
             key={i}
@@ -127,7 +142,6 @@ function HeroBanner() {
 
 export default function HomePage() {
   const { data: featured, isLoading: featuredLoading } = useGetFeaturedProducts();
-  const { data: categories } = useListCategories();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,14 +166,18 @@ export default function HomePage() {
                   transition={{ delay: i * 0.07 }}
                 >
                   <Link href={`/products?category=${cat.slug}`}>
-                    <div className="bg-white rounded-lg border border-gray-200 p-4 text-center hover:border-[#1B5E20] hover:shadow-md transition-all cursor-pointer group">
-                      <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-[#E8F5E9] flex items-center justify-center group-hover:bg-[#1B5E20] transition-colors">
-                        <span className="text-[#1B5E20] group-hover:text-white font-bold text-sm transition-colors">
-                          {cat.name.charAt(0)}
-                        </span>
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-[#1B5E20] hover:shadow-lg transition-all cursor-pointer group">
+                      <div className="aspect-[4/3] overflow-hidden">
+                        <img
+                          src={cat.image}
+                          alt={cat.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
                       </div>
-                      <p className="text-sm font-semibold text-gray-800">{cat.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{cat.description}</p>
+                      <div className="p-3 text-center">
+                        <p className="text-sm font-semibold text-gray-800">{cat.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{cat.description}</p>
+                      </div>
                     </div>
                   </Link>
                 </motion.div>
@@ -213,13 +231,15 @@ export default function HomePage() {
           {/* Promo banner */}
           <section className="mb-10">
             <Link href="/products?category=ofertas">
-              <div className="bg-gradient-to-r from-[#C62828] to-[#E53935] rounded-lg p-8 text-white flex items-center justify-between cursor-pointer hover:opacity-95 transition-opacity">
-                <div>
-                  <p className="text-sm uppercase tracking-widest mb-1 opacity-80">Promoção Especial</p>
-                  <h3 className="text-2xl font-extrabold">ATÉ 50% DE DESCONTO</h3>
-                  <p className="mt-2 opacity-90">Aproveite as melhores ofertas da temporada</p>
+              <div className="relative overflow-hidden rounded-lg cursor-pointer group">
+                <img src={bannerOfertas} alt="Ofertas" className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#C62828]/90 via-[#C62828]/60 to-transparent flex items-center">
+                  <div className="px-8 text-white">
+                    <p className="text-sm uppercase tracking-widest mb-1 opacity-80">Promoção Especial</p>
+                    <h3 className="text-2xl font-extrabold">10% DE DESCONTO</h3>
+                    <p className="mt-2 opacity-90">Aproveite as melhores ofertas da temporada</p>
+                  </div>
                 </div>
-                <div className="text-6xl font-black opacity-20 select-none">%</div>
               </div>
             </Link>
           </section>

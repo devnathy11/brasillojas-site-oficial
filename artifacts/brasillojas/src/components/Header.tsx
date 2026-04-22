@@ -5,6 +5,7 @@ import { ShoppingCart, Search, User, Menu, X, ChevronDown, LogOut, Package, User
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetCart } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/Logo";
 
 const categories = [
   { name: "Móveis", slug: "moveis" },
@@ -39,9 +40,7 @@ export function Header() {
           <div className="flex items-center gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                <span className="text-[#1B5E20] font-bold text-sm">BL</span>
-              </div>
+              <Logo size={42} />
               <span className="font-bold text-lg tracking-wide hidden sm:block">BRASILLOJAS</span>
             </Link>
 

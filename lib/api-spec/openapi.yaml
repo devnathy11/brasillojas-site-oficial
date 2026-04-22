@@ -821,6 +821,12 @@ components:
           nullable: true
         shippingAddress:
           $ref: "#/components/schemas/Address"
+        paymentMethod:
+          type: string
+          enum: [pix, credit_card, debit_card, boleto]
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded]
         createdAt:
           type: string
         updatedAt:
@@ -835,6 +841,9 @@ components:
         couponCode:
           type: string
           nullable: true
+        paymentMethod:
+          type: string
+          enum: [pix, credit_card, debit_card, boleto]
       required: [shippingAddress]
 
     Address:
@@ -1010,30 +1019,53 @@ components:
     AdminDashboard:
       type: object
       properties:
-        totalRevenue:
-          type: number
-        totalOrders:
-          type: integer
-        totalUsers:
-          type: integer
-        totalProducts:
-          type: integer
+        products:
+          type: object
+          properties:
+            total: { type: integer }
+            active: { type: integer }
+            lowStock: { type: integer }
+        orders:
+          type: object
+          properties:
+            total: { type: integer }
+            pending: { type: integer }
+            delivered: { type: integer }
+        users:
+          type: object
+          properties:
+            total: { type: integer }
+        revenue:
+          type: object
+          properties:
+            total: { type: number }
+            today: { type: number }
+            week: { type: number }
+        coupons:
+          type: object
+          properties:
+            total: { type: integer }
+            active: { type: integer }
         recentOrders:
-          type: array
-          items:
-            $ref: "#/components/schemas/Order"
-        revenueByMonth:
           type: array
           items:
             type: object
             properties:
-              month:
-                type: string
-              revenue:
-                type: number
-            required: [month, revenue]
-        ordersByStatus:
-          type: object
-          additionalProperties:
-            type: integer
-      required: [totalRevenue, totalOrders, totalUsers, totalProducts, recentOrders, revenueByMonth, ordersByStatus]
+              id: { type: integer }
+              status: { type: string }
+              total: { type: number }
+              paymentMethod: { type: string }
+              paymentStatus: { type: string }
+              createdAt: { type: string }
+              itemCount: { type: integer }
+            required: [id, status, total, paymentMethod, paymentStatus, createdAt, itemCount]
+        salesByDay:
+          type: array
+          items:
+            type: object
+            properties:
+              day: { type: string }
+              total: { type: number }
+              orders: { type: integer }
+            required: [day, total, orders]
+      required: [products, orders, users, revenue, coupons, recentOrders, salesByDay]

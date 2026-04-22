@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { Logo } from "@/components/Logo";
 
 export function Footer() {
   return (
@@ -34,9 +35,7 @@ export function Footer() {
           </div>
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                <span className="text-[#1B5E20] font-bold text-sm">BL</span>
-              </div>
+              <Logo size={42} />
               <span className="font-bold text-lg">BRASILLOJAS</span>
             </div>
             <p className="text-sm text-green-100 mb-4">

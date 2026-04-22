@@ -12,6 +12,7 @@ import ProductDetailPage from "@/pages/ProductDetail";
 import CartPage from "@/pages/Cart";
 import OrdersPage from "@/pages/Orders";
 import ProfilePage from "@/pages/Profile";
+import ReceiptPage from "@/pages/Receipt";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -156,6 +157,9 @@ function Router() {
       <Route path="/cart" component={CartPage} />
       <Route path="/orders">
         <ProtectedRoute component={OrdersPage} />
+      </Route>
+      <Route path="/receipt/:id">
+        <ProtectedRoute component={ReceiptPage} />
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={ProfilePage} />

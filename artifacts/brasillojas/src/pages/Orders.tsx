@@ -88,9 +88,9 @@ export default function OrdersPage() {
                     <p className="text-sm text-gray-600">{order.items.length} {order.items.length === 1 ? "item" : "itens"}</p>
                     <p className="font-bold text-[#1B5E20]">{formatBRL(order.total)}</p>
                   </div>
-                  <button className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
-                    Ver detalhes <ChevronRight size={14} />
-                  </button>
+                  <Link href={`/receipt/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
+                    Ver comprovante <ChevronRight size={14} />
+                  </Link>
                 </div>
               </motion.div>
             ))}

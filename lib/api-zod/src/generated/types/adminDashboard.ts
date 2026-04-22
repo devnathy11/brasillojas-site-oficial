@@ -5,16 +5,20 @@
  * BrasilLojas e-commerce API
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminDashboardOrdersByStatus } from "./adminDashboardOrdersByStatus";
-import type { AdminDashboardRevenueByMonthItem } from "./adminDashboardRevenueByMonthItem";
-import type { Order } from "./order";
+import type { AdminDashboardCoupons } from "./adminDashboardCoupons";
+import type { AdminDashboardOrders } from "./adminDashboardOrders";
+import type { AdminDashboardProducts } from "./adminDashboardProducts";
+import type { AdminDashboardRecentOrdersItem } from "./adminDashboardRecentOrdersItem";
+import type { AdminDashboardRevenue } from "./adminDashboardRevenue";
+import type { AdminDashboardSalesByDayItem } from "./adminDashboardSalesByDayItem";
+import type { AdminDashboardUsers } from "./adminDashboardUsers";
 
 export interface AdminDashboard {
-  totalRevenue: number;
-  totalOrders: number;
-  totalUsers: number;
-  totalProducts: number;
-  recentOrders: Order[];
-  revenueByMonth: AdminDashboardRevenueByMonthItem[];
-  ordersByStatus: AdminDashboardOrdersByStatus;
+  products: AdminDashboardProducts;
+  orders: AdminDashboardOrders;
+  users: AdminDashboardUsers;
+  revenue: AdminDashboardRevenue;
+  coupons: AdminDashboardCoupons;
+  recentOrders: AdminDashboardRecentOrdersItem[];
+  salesByDay: AdminDashboardSalesByDayItem[];
 }
