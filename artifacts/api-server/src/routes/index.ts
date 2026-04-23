@@ -8,6 +8,7 @@ import reviewsRouter from "./reviews";
 import couponsRouter from "./coupons";
 import usersRouter from "./users";
 import adminRouter from "./admin";
+import stripeRouter from "./stripe";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(reviewsRouter);
 router.use(couponsRouter);
 router.use(usersRouter);
 router.use(adminRouter);
+router.use(stripeRouter);
 
 export default router;

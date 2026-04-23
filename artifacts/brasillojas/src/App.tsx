@@ -1,10 +1,24 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from "@clerk/react";
-import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
+import {
+  ClerkProvider,
+  SignIn,
+  SignUp,
+  Show,
+  useClerk,
+  useAuth,
+} from "@clerk/react";
+import {
+  Switch,
+  Route,
+  useLocation,
+  Router as WouterRouter,
+  Redirect,
+} from "wouter";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/Home";
 import ProductsPage from "@/pages/Products";
@@ -13,6 +27,7 @@ import CartPage from "@/pages/Cart";
 import OrdersPage from "@/pages/Orders";
 import ProfilePage from "@/pages/Profile";
 import ReceiptPage from "@/pages/Receipt";
+import PaymentSuccessPage from "@/pages/PaymentSuccess";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -74,9 +89,20 @@ const clerkAppearance = {
   },
 };
 
+/**
+ * Registers the Clerk session token as the Bearer token for every API call.
+ * This is the fix for 401 errors on cart / order endpoints.
+ */
+function ApiClientTokenInitializer() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+    return () => setAuthTokenGetter(null);
+  }, [getToken]);
+  return null;
+}
+
 function SignInPage() {
-  // To update login providers, app branding, or OAuth settings use the Auth
-  // pane in the workspace toolbar. More information can be found in the Replit docs.
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md">
@@ -87,15 +113,17 @@ function SignInPage() {
           <h1 className="text-2xl font-bold text-[#1B5E20]">BrasilLojas</h1>
           <p className="text-gray-500 text-sm mt-1">Sua loja online favorita</p>
         </div>
-        <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+        <SignIn
+          routing="path"
+          path={`${basePath}/sign-in`}
+          signUpUrl={`${basePath}/sign-up`}
+        />
       </div>
     </div>
   );
 }
 
 function SignUpPage() {
-  // To update login providers, app branding, or OAuth settings use the Auth
-  // pane in the workspace toolbar. More information can be found in the Replit docs.
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md">
@@ -104,9 +132,15 @@ function SignUpPage() {
             <span className="text-white font-bold text-2xl">BL</span>
           </div>
           <h1 className="text-2xl font-bold text-[#1B5E20]">BrasilLojas</h1>
-          <p className="text-gray-500 text-sm mt-1">Crie sua conta e comece a comprar</p>
+          <p className="text-gray-500 text-sm mt-1">
+            Crie sua conta e comece a comprar
+          </p>
         </div>
-        <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+        <SignUp
+          routing="path"
+          path={`${basePath}/sign-up`}
+          signInUrl={`${basePath}/sign-in`}
+        />
       </div>
     </div>
   );
@@ -120,7 +154,10 @@ function ClerkQueryClientCacheInvalidator() {
   useEffect(() => {
     const unsubscribe = addListener(({ user }) => {
       const userId = user?.id ?? null;
-      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+      if (
+        prevUserIdRef.current !== undefined &&
+        prevUserIdRef.current !== userId
+      ) {
         qc.clear();
       }
       prevUserIdRef.current = userId;
@@ -131,7 +168,11 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({
+  component: Component,
+}: {
+  component: React.ComponentType;
+}) {
   return (
     <>
       <Show when="signed-in">
@@ -160,6 +201,9 @@ function Router() {
       </Route>
       <Route path="/receipt/:id">
         <ProtectedRoute component={ReceiptPage} />
+      </Route>
+      <Route path="/payment-success">
+        <ProtectedRoute component={PaymentSuccessPage} />
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={ProfilePage} />
@@ -197,6 +241,7 @@ function ClerkProviderWithRoutes() {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
+        <ApiClientTokenInitializer />
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <Router />

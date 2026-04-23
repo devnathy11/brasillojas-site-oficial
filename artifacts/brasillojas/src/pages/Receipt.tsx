@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, useLocation, Link } from "wouter";
+import { useParams, Link } from "wouter";
 import { Printer, CheckCircle2, ArrowLeft, QrCode } from "lucide-react";
 import { useGetOrder } from "@workspace/api-client-react";
 import { Header } from "@/components/Header";
@@ -19,14 +19,18 @@ export default function ReceiptPage() {
   const orderId = Number(params.id);
   const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } });
 
-  // Auto-print if ?print=1 is set
+  // Auto-print when arriving from the checkout flow
   useEffect(() => {
     if (!order || isLoading) return;
-    if (location.includes("print=1") || window.location.search.includes("print=1")) {
-      const t = setTimeout(() => window.print(), 600);
+    const key = "bl_autoprint_order";
+    const pending = sessionStorage.getItem(key);
+    if (pending === String(orderId)) {
+      sessionStorage.removeItem(key);
+      // Small delay so the page renders before the print dialog
+      const t = setTimeout(() => window.print(), 700);
       return () => clearTimeout(t);
     }
-  }, [order, isLoading, location]);
+  }, [order, isLoading, orderId]);
 
   if (isLoading || !order) {
     return (

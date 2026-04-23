@@ -27,6 +27,8 @@ export default function CartPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [card, setCard] = useState({ number: "", name: "", exp: "", cvv: "", installments: 1 });
   const [showCheckout, setShowCheckout] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeError, setStripeError] = useState("");
   const [, setLocation] = useLocation();
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } });
@@ -64,24 +66,46 @@ export default function CartPage() {
     removeItem.mutate({ productId }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }) });
   }
 
-  function handlePlaceOrder(e: React.FormEvent) {
+  async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
+    setStripeError("");
 
-    // Basic card validation in sandbox
+    // Card payments → Stripe Checkout (real payment)
     if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
-      const digits = card.number.replace(/\s/g, "");
-      if (digits.length < 13 || !card.name || !card.exp || card.cvv.length < 3) {
-        alert("Por favor, preencha os dados do cartão corretamente.");
-        return;
+      setStripeLoading(true);
+      try {
+        const res = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shippingAddress: address,
+            couponCode: appliedCoupon || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStripeError(data.error ?? "Erro ao iniciar pagamento.");
+          setStripeLoading(false);
+          return;
+        }
+        // Redirect browser to Stripe Checkout
+        window.location.href = data.url;
+      } catch (err: any) {
+        setStripeError("Erro de conexão ao iniciar pagamento.");
+        setStripeLoading(false);
       }
+      return;
     }
 
+    // PIX / Boleto → simulated flow (creates order immediately)
     createOrder.mutate(
       { data: { shippingAddress: address, couponCode: appliedCoupon || undefined, paymentMethod } },
       {
         onSuccess: (order) => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-          setLocation(`/receipt/${order.id}?print=1`);
+          // Flag the receipt page to auto-print on arrival
+          sessionStorage.setItem("bl_autoprint_order", String(order.id));
+          setLocation(`/receipt/${order.id}`);
         },
       }
     );
@@ -275,9 +299,29 @@ export default function CartPage() {
                       </AnimatePresence>
                     </div>
 
-                    <button type="submit" disabled={createOrder.isPending} className="w-full py-3 bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-bold rounded-md transition-colors disabled:opacity-70">
-                      {createOrder.isPending ? "Processando pagamento..." : `Pagar ${formatBRL(total)}`}
+                    {stripeError && (
+                      <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{stripeError}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={createOrder.isPending || stripeLoading}
+                      className="w-full py-3 bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-bold rounded-md transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                    >
+                      {(createOrder.isPending || stripeLoading) ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Processando pagamento...
+                        </>
+                      ) : (
+                        `Pagar ${formatBRL(total)}`
+                      )}
                     </button>
+                    {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
+                      <p className="text-[11px] text-center text-gray-400">🔒 Pagamento processado com segurança pelo Stripe</p>
+                    )}
                   </motion.form>
                 )}
               </AnimatePresence>
