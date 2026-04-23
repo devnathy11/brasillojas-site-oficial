@@ -7,6 +7,7 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone"),
+  recoveryEmail: text("recovery_email"),
   address: jsonb("address").$type<{
     street: string;
     number: string;

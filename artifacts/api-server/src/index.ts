@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { getUncachableStripeClient } from "./stripeClient";
+import { runMigrations } from "./migrate";
 
 const rawPort = process.env["PORT"];
 
@@ -32,13 +33,21 @@ async function initStripe() {
   }
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-  logger.info({ port }, "Server listening");
+// Run DB migrations before starting the server
+runMigrations()
+  .then(() => {
+    app.listen(port, (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
+      logger.info({ port }, "Server listening");
 
-  // Initialize Stripe after server starts (non-blocking)
-  initStripe();
-});
+      // Initialize Stripe after server starts (non-blocking)
+      initStripe();
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Fatal: DB migration failed, server will not start");
+    process.exit(1);
+  });

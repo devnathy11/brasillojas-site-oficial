@@ -11,8 +11,6 @@ import bannerOfertas from "@/assets/cat-ofertas.png";
 import bannerNovidades from "@/assets/cat-novidades.png";
 import bannerModa from "@/assets/banner-moda.png";
 import catMoveis from "@/assets/cat-moveis.png";
-import catRoupas from "@/assets/cat-roupas.png";
-import catCalcados from "@/assets/cat-calcados.png";
 import catNovidades from "@/assets/cat-novidades.png";
 import catOfertas from "@/assets/cat-ofertas.png";
 import catEletronicos from "@/assets/cat-eletronicos.png";
@@ -46,11 +44,10 @@ const banners = [
 
 const categoryGrid = [
   { name: "Móveis", slug: "moveis", description: "Sofás, camas e mais", image: catMoveis },
-  { name: "Roupas & Confecções", slug: "roupas", description: "Moda feminina e masculina", image: catRoupas },
-  { name: "Calçados", slug: "calcados", description: "Tênis, sapatos e sandálias", image: catCalcados },
+  { name: "Eletrodomésticos", slug: "eletrodomesticos", description: "Geladeiras, lavadoras e mais", image: catEletronicos },
+  { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets", image: catEletronicos },
   { name: "Novidades", slug: "novidades", description: "Chegou agora", image: catNovidades },
   { name: "Ofertas", slug: "ofertas", description: "10% off em produtos selecionados", image: catOfertas },
-  { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets", image: catEletronicos },
 ];
 
 function HeroBanner() {
@@ -157,7 +154,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-gray-800 mb-5 uppercase tracking-wide">
               Compre por Categoria
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {categoryGrid.map((cat, i) => (
                 <motion.div
                   key={cat.slug}

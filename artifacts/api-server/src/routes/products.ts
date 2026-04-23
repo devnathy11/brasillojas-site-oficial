@@ -16,9 +16,11 @@ function mapProduct(p: typeof productsTable.$inferSelect, category?: typeof cate
     images: p.images ?? [],
     categoryId: p.categoryId,
     categoryName: category?.name ?? "",
+    categorySlug: category?.slug ?? "",
     stock: p.stock,
     brand: p.brand ?? null,
     sku: p.sku ?? null,
+    barcode: p.barcode ?? null,
     isFeatured: p.isFeatured,
     isActive: p.isActive,
     specifications: p.specifications ?? null,
@@ -164,6 +166,7 @@ router.post("/products", async (req, res) => {
       stock: req.body.stock ?? 0,
       brand: req.body.brand ?? null,
       sku: req.body.sku ?? null,
+      barcode: req.body.barcode ?? null,
       isFeatured: req.body.isFeatured ?? false,
       isActive: req.body.isActive ?? true,
       specifications: req.body.specifications ?? null,
@@ -185,7 +188,7 @@ router.put("/products/:id", async (req, res) => {
 
     const id = parseInt(req.params.id, 10);
     const updates: Record<string, unknown> = {};
-    const allowed = ["name", "description", "price", "originalPrice", "imageUrl", "images", "categoryId", "stock", "brand", "sku", "isFeatured", "isActive", "specifications"];
+    const allowed = ["name", "description", "price", "originalPrice", "imageUrl", "images", "categoryId", "stock", "brand", "sku", "barcode", "isFeatured", "isActive", "specifications"];
     for (const key of allowed) {
       if (key in req.body) updates[key] = req.body[key];
     }

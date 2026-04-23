@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useUser, Show } from "@clerk/react";
+import { useUser, Show, useClerk } from "@clerk/react";
 import { ShoppingCart, Search, User, Menu, X, ChevronDown, LogOut, Package, UserCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetCart } from "@workspace/api-client-react";
@@ -9,8 +9,8 @@ import { Logo } from "@/components/Logo";
 
 const categories = [
   { name: "Móveis", slug: "moveis" },
-  { name: "Roupas & Confecções", slug: "roupas" },
-  { name: "Calçados", slug: "calcados" },
+  { name: "Eletrodomésticos", slug: "eletrodomesticos" },
+  { name: "Eletrônicos", slug: "eletronicos" },
   { name: "Novidades", slug: "novidades" },
   { name: "Ofertas", slug: "ofertas" },
 ];
@@ -21,6 +21,7 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [, setLocation] = useLocation();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const { data: cart } = useGetCart({ query: { retry: false } });
 
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
@@ -117,13 +118,12 @@ export function Header() {
                           <Package size={16} /> Meus Pedidos
                         </Link>
                         <hr className="border-gray-100" />
-                        <Link
-                          href="/sign-in"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
+                        <button
+                          onClick={() => { setUserMenuOpen(false); signOut(); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-b-lg text-left"
                         >
                           <LogOut size={16} /> Sair
-                        </Link>
+                        </button>
                       </motion.div>
                     )}
                   </AnimatePresence>

@@ -19,7 +19,8 @@ import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, useGetUserProfile } from "@workspace/api-client-react";
+import type { UserProfile } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/Home";
 import ProductsPage from "@/pages/Products";
@@ -169,6 +170,43 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function isProfileComplete(profile: UserProfile | undefined): boolean {
+  if (!profile) return false;
+  return !!(
+    profile.name &&
+    profile.email &&
+    profile.recoveryEmail &&
+    profile.phone &&
+    profile.address?.zipCode &&
+    profile.address?.street &&
+    profile.address?.number &&
+    profile.address?.neighborhood &&
+    profile.address?.city &&
+    profile.address?.state
+  );
+}
+
+const PROFILE_EXEMPT_PATHS = ["/profile", "/sign-in", "/sign-up"];
+
+function ProfileCompletionGate({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, isLoaded } = useAuth();
+  const [location, setLocation] = useLocation();
+  const { data: profile, isLoading } = useGetUserProfile({
+    query: { enabled: !!isSignedIn && isLoaded, retry: false },
+  });
+
+  const isExempt = PROFILE_EXEMPT_PATHS.some((p) => location.startsWith(p));
+
+  useEffect(() => {
+    if (!isLoaded || isLoading || !isSignedIn || isExempt) return;
+    if (!isProfileComplete(profile)) {
+      setLocation("/profile");
+    }
+  }, [isLoaded, isLoading, isSignedIn, profile, isExempt, setLocation]);
+
+  return <>{children}</>;
+}
+
 function ProtectedRoute({
   component: Component,
 }: {
@@ -246,7 +284,9 @@ function ClerkProviderWithRoutes() {
         <ApiClientTokenInitializer />
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
-          <Router />
+          <ProfileCompletionGate>
+            <Router />
+          </ProfileCompletionGate>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>

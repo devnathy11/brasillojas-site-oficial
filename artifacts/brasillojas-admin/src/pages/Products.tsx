@@ -6,7 +6,9 @@ import type { Product, CreateProductBody } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBRL } from "@/lib/utils";
 
-const emptyForm: CreateProductBody = {
+type ProductForm = CreateProductBody & { isActive?: boolean };
+
+const emptyForm: ProductForm = {
   name: "",
   description: "",
   price: 0,
@@ -17,6 +19,7 @@ const emptyForm: CreateProductBody = {
   stock: 0,
   brand: undefined,
   sku: undefined,
+  barcode: undefined,
   isFeatured: false,
   isActive: true,
   specifications: undefined,
@@ -26,7 +29,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [form, setForm] = useState<CreateProductBody>(emptyForm);
+  const [form, setForm] = useState<ProductForm>(emptyForm);
 
   const { data, isLoading } = useListProducts({ search: search || undefined });
   const { data: categories } = useListCategories();
@@ -56,6 +59,7 @@ export default function ProductsPage() {
       stock: product.stock,
       brand: product.brand ?? undefined,
       sku: product.sku ?? undefined,
+      barcode: product.barcode ?? undefined,
       isFeatured: product.isFeatured,
       isActive: product.isActive,
       specifications: product.specifications ?? undefined,
@@ -210,6 +214,7 @@ export default function ProductsPage() {
                   { key: "name", label: "Nome", type: "text", required: true },
                   { key: "brand", label: "Marca", type: "text" },
                   { key: "sku", label: "SKU", type: "text" },
+                  { key: "barcode", label: "Código de Barras", type: "text" },
                   { key: "imageUrl", label: "URL da Imagem", type: "url", required: true },
                   { key: "price", label: "Preco (R$)", type: "number", required: true },
                   { key: "originalPrice", label: "Preco Original (R$)", type: "number" },
@@ -219,7 +224,7 @@ export default function ProductsPage() {
                     <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
                     <input
                       type={type}
-                      value={(form as any)[key] ?? ""}
+                      value={(form[key as keyof typeof form] as string | number | undefined) ?? ""}
                       onChange={(e) => setForm({ ...form, [key]: type === "number" ? Number(e.target.value) : e.target.value })}
                       required={required}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"

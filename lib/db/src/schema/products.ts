@@ -22,6 +22,7 @@ export const productsTable = pgTable("products", {
   stock: integer("stock").default(0).notNull(),
   brand: text("brand"),
   sku: text("sku"),
+  barcode: text("barcode"),
   isFeatured: boolean("is_featured").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   specifications: jsonb("specifications").$type<Record<string, string>>(),

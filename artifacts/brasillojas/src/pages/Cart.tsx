@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, CreditCard, QrCode, FileText, Wallet } from "lucide-react";
-import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useCreateOrder } from "@workspace/api-client-react";
+import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, CreditCard, QrCode, FileText, Wallet, Truck, Store, AlertCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useCreateOrder, useGetUserProfile } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
+import type { UserProfile } from "@workspace/api-client-react";
 import { Show, useAuth } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -12,12 +14,28 @@ import { formatBRL } from "@/lib/utils";
 
 type PaymentMethod = "pix" | "credit_card" | "debit_card" | "boleto";
 
-const PAYMENT_OPTIONS: Array<{ id: PaymentMethod; label: string; sub: string; icon: any }> = [
+const PAYMENT_OPTIONS: Array<{ id: PaymentMethod; label: string; sub: string; icon: LucideIcon }> = [
   { id: "pix", label: "PIX", sub: "Aprovação imediata · 5% de desconto", icon: QrCode },
   { id: "credit_card", label: "Cartão de Crédito", sub: "Em até 12x sem juros", icon: CreditCard },
   { id: "debit_card", label: "Cartão de Débito", sub: "Aprovação imediata", icon: Wallet },
   { id: "boleto", label: "Boleto Bancário", sub: "Vence em 3 dias úteis", icon: FileText },
 ];
+
+function isProfileComplete(profile: UserProfile | null | undefined): boolean {
+  if (!profile) return false;
+  return !!(
+    profile.name &&
+    profile.email &&
+    profile.recoveryEmail &&
+    profile.phone &&
+    profile.address?.zipCode &&
+    profile.address?.street &&
+    profile.address?.number &&
+    profile.address?.neighborhood &&
+    profile.address?.city &&
+    profile.address?.state
+  );
+}
 
 export default function CartPage() {
   const [couponCode, setCouponCode] = useState("");
@@ -33,6 +51,7 @@ export default function CartPage() {
   const { getToken } = useAuth();
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } });
+  const { data: profile } = useGetUserProfile({ query: { retry: false } });
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveFromCart();
   const createOrder = useCreateOrder();
@@ -71,7 +90,11 @@ export default function CartPage() {
     e.preventDefault();
     setStripeError("");
 
-    // Card payments → Stripe Checkout (real payment)
+    const hasMoveisItems = moveiItems.length > 0;
+    const shippingAddr = hasMoveisItems
+      ? address
+      : profile?.address ?? address;
+
     if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
       setStripeLoading(true);
       try {
@@ -83,7 +106,7 @@ export default function CartPage() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            shippingAddress: address,
+            shippingAddress: shippingAddr,
             couponCode: appliedCoupon || undefined,
           }),
         });
@@ -93,22 +116,19 @@ export default function CartPage() {
           setStripeLoading(false);
           return;
         }
-        // Redirect browser to Stripe Checkout
         window.location.href = data.url;
-      } catch (err: any) {
+      } catch {
         setStripeError("Erro de conexão ao iniciar pagamento.");
         setStripeLoading(false);
       }
       return;
     }
 
-    // PIX / Boleto → simulated flow (creates order immediately)
     createOrder.mutate(
-      { data: { shippingAddress: address, couponCode: appliedCoupon || undefined, paymentMethod } },
+      { data: { shippingAddress: shippingAddr, couponCode: appliedCoupon || undefined, paymentMethod } },
       {
         onSuccess: (order) => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-          // Flag the receipt page to auto-print on arrival
           sessionStorage.setItem("bl_autoprint_order", String(order.id));
           setLocation(`/receipt/${order.id}`);
         },
@@ -140,6 +160,12 @@ export default function CartPage() {
   const discount = Number(cart?.discount ?? 0) + couponDiscount + pixDiscount;
   const total = Math.max(0, subtotal - discount);
 
+  const moveiItems = items.filter((item) => item.categorySlug === "moveis");
+  const nonMoveiItems = items.filter((item) => item.categorySlug !== "moveis");
+  const allMoveis = items.length > 0 && nonMoveiItems.length === 0;
+  const hasNonMoveis = nonMoveiItems.length > 0;
+  const profileComplete = isProfileComplete(profile);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -160,29 +186,53 @@ export default function CartPage() {
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-3">
               <AnimatePresence>
-                {items.map((item) => (
-                  <motion.div key={item.productId} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="bg-white rounded-lg border border-gray-200 p-4 flex gap-4">
-                    <Link href={`/products/${item.productId}`} className="flex-shrink-0">
-                      <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover rounded-md border border-gray-100" />
-                    </Link>
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/products/${item.productId}`}>
-                        <h3 className="text-sm font-semibold text-gray-800 hover:text-[#1B5E20] line-clamp-2">{item.name}</h3>
+                {items.map((item) => {
+                  const isMovel = item.categorySlug === "moveis";
+                  return (
+                    <motion.div key={item.productId} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="bg-white rounded-lg border border-gray-200 p-4 flex gap-4">
+                      <Link href={`/products/${item.productId}`} className="flex-shrink-0">
+                        <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover rounded-md border border-gray-100" />
                       </Link>
-                      <p className="text-lg font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <div className="flex items-center border border-gray-300 rounded overflow-hidden">
-                          <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100"><Minus size={14} /></button>
-                          <span className="w-10 text-center text-sm font-semibold">{item.quantity}</span>
-                          <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={14} /></button>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/products/${item.productId}`}>
+                          <h3 className="text-sm font-semibold text-gray-800 hover:text-[#1B5E20] line-clamp-2">{item.name}</h3>
+                        </Link>
+                        <p className="text-lg font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex items-center border border-gray-300 rounded overflow-hidden">
+                            <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100"><Minus size={14} /></button>
+                            <span className="w-10 text-center text-sm font-semibold">{item.quantity}</span>
+                            <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={14} /></button>
+                          </div>
+                          <button onClick={() => handleRemove(item.productId)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16} /></button>
+                          <p className="ml-auto font-bold text-gray-800">{formatBRL(item.price * item.quantity)}</p>
                         </div>
-                        <button onClick={() => handleRemove(item.productId)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16} /></button>
-                        <p className="ml-auto font-bold text-gray-800">{formatBRL(item.price * item.quantity)}</p>
+                        <div className="mt-2">
+                          {isMovel ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
+                              <Truck size={11} /> Entrega disponível
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                              <Store size={11} /> Retirada na Loja
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
+
+              {hasNonMoveis && (
+                <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs">
+                  <Store size={16} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Retirada na Loja</p>
+                    <p>Os itens marcados acima devem ser retirados em nossa loja física. Somente produtos da categoria Móveis têm entrega disponível.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -215,9 +265,21 @@ export default function CartPage() {
                 </div>
 
                 <Show when="signed-in">
-                  <button onClick={() => setShowCheckout(!showCheckout)} className="w-full mt-4 py-3 bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold rounded-md flex items-center justify-center gap-2">
-                    Finalizar Compra <ArrowRight size={18} />
-                  </button>
+                  {!profileComplete ? (
+                    <div className="mt-4">
+                      <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs mb-3">
+                        <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>Complete seu perfil antes de finalizar a compra.</span>
+                      </div>
+                      <Link href="/profile" className="w-full py-3 bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-bold rounded-md flex items-center justify-center gap-2 text-sm">
+                        Completar Perfil
+                      </Link>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowCheckout(!showCheckout)} className="w-full mt-4 py-3 bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold rounded-md flex items-center justify-center gap-2">
+                      Finalizar Compra <ArrowRight size={18} />
+                    </button>
+                  )}
                 </Show>
                 <Show when="signed-out">
                   <Link href="/sign-in" className="w-full mt-4 py-3 bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold rounded-md flex items-center justify-center gap-2 block text-center">
@@ -229,25 +291,59 @@ export default function CartPage() {
               <AnimatePresence>
                 {showCheckout && (
                   <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} onSubmit={handlePlaceOrder} className="bg-white rounded-lg border border-gray-200 p-4 space-y-5">
-                    <div>
-                      <h3 className="font-bold text-gray-800 mb-3">Endereço de Entrega</h3>
-                      <div className="space-y-3">
-                        {[
-                          { field: "zipCode", label: "CEP", placeholder: "00000-000" },
-                          { field: "street", label: "Rua", placeholder: "Nome da rua" },
-                          { field: "number", label: "Número", placeholder: "123" },
-                          { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)" },
-                          { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro" },
-                          { field: "city", label: "Cidade", placeholder: "Nome da cidade" },
-                          { field: "state", label: "Estado", placeholder: "SP" },
-                        ].map(({ field, label, placeholder }) => (
-                          <div key={field}>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                            <input value={(address as any)[field]} onChange={(e) => setAddress({ ...address, [field]: e.target.value })} placeholder={placeholder} required={field !== "complement"} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                          </div>
-                        ))}
+
+                    {allMoveis && (
+                      <div>
+                        <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Endereço de Entrega</h3>
+                        <div className="space-y-3">
+                          {[
+                            { field: "zipCode", label: "CEP", placeholder: "00000-000" },
+                            { field: "street", label: "Rua", placeholder: "Nome da rua" },
+                            { field: "number", label: "Número", placeholder: "123" },
+                            { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)" },
+                            { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro" },
+                            { field: "city", label: "Cidade", placeholder: "Nome da cidade" },
+                            { field: "state", label: "Estado", placeholder: "SP" },
+                          ].map(({ field, label, placeholder }) => (
+                            <div key={field}>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                              <input value={address[field as keyof typeof address] ?? ""} onChange={(e) => setAddress({ ...address, [field]: e.target.value })} placeholder={placeholder} required={field !== "complement"} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {hasNonMoveis && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                        <p className="font-semibold flex items-center gap-1 mb-1"><Store size={13} /> Retirada na Loja</p>
+                        <p>
+                          {nonMoveiItems.map((i) => i.name).join(", ")} {nonMoveiItems.length === 1 ? "deve ser retirado" : "devem ser retirados"} em nossa loja física após a confirmação do pedido.
+                        </p>
+                      </div>
+                    )}
+
+                    {moveiItems.length > 0 && hasNonMoveis && (
+                      <div>
+                        <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Endereço de Entrega (Móveis)</h3>
+                        <div className="space-y-3">
+                          {[
+                            { field: "zipCode", label: "CEP", placeholder: "00000-000" },
+                            { field: "street", label: "Rua", placeholder: "Nome da rua" },
+                            { field: "number", label: "Número", placeholder: "123" },
+                            { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)" },
+                            { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro" },
+                            { field: "city", label: "Cidade", placeholder: "Nome da cidade" },
+                            { field: "state", label: "Estado", placeholder: "SP" },
+                          ].map(({ field, label, placeholder }) => (
+                            <div key={field}>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                              <input value={address[field as keyof typeof address] ?? ""} onChange={(e) => setAddress({ ...address, [field]: e.target.value })} placeholder={placeholder} required={field !== "complement"} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <h3 className="font-bold text-gray-800 mb-3">Forma de Pagamento</h3>

@@ -1,11 +1,10 @@
 import { db } from "@workspace/db";
 import { categoriesTable, productsTable, couponsTable } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { sql, inArray } from "drizzle-orm";
 
 const categories = [
   { name: "Móveis", slug: "moveis", imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400" },
-  { name: "Roupas & Confecções", slug: "roupas", imageUrl: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400" },
-  { name: "Calçados", slug: "calcados", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" },
+  { name: "Eletrodomésticos", slug: "eletrodomesticos", imageUrl: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400" },
   { name: "Novidades", slug: "novidades", imageUrl: "https://images.unsplash.com/photo-1586495777744-4e6232bf7946?w=400" },
   { name: "Ofertas", slug: "ofertas", imageUrl: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400" },
   { name: "Eletrônicos", slug: "eletronicos", imageUrl: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400" },
@@ -47,72 +46,39 @@ const products = [
     specifications: { Material: "Eucalipto", Lugares: "6", Dimensões: "180x90cm" },
   },
   {
-    name: "Vestido Floral Midi Verão",
-    description: "Vestido midi estampado floral, tecido leve e respirável. Perfeito para o verão brasileiro.",
-    price: "149.90",
-    originalPrice: "199.90",
-    imageUrl: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600",
-    categorySlug: "roupas",
-    stock: 45,
-    brand: "ModaBR",
+    name: "Geladeira Frost Free 450L",
+    description: "Geladeira frost free com capacidade de 450 litros, painel digital e dispenser de água.",
+    price: "3299.90",
+    originalPrice: "3999.90",
+    imageUrl: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600",
+    categorySlug: "eletrodomesticos",
+    stock: 12,
+    brand: "EltroBR",
     isFeatured: true,
-    specifications: { Tecido: "Viscose", Comprimento: "Midi", Estampa: "Floral" },
+    specifications: { Capacidade: "450L", "Tipo": "Frost Free", "Voltagem": "Bivolt", "Cor": "Inox" },
   },
   {
-    name: "Camiseta Premium Algodão Pima",
-    description: "Camiseta masculina em algodão pima premium, extra macia e durável. Fit regular.",
-    price: "89.90",
-    originalPrice: "120.00",
-    imageUrl: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600",
-    categorySlug: "roupas",
-    stock: 120,
-    brand: "ModaBR",
-    specifications: { Tecido: "Algodão Pima 100%", Fit: "Regular", "Origem": "Brasil" },
-  },
-  {
-    name: "Jeans Skinny Feminino",
-    description: "Calça jeans skinny feminina com elastano para máximo conforto. Corte moderno e versátil.",
-    price: "199.90",
-    imageUrl: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600",
-    categorySlug: "roupas",
-    stock: 60,
-    brand: "DenimBR",
+    name: "Máquina de Lavar 12kg Digital",
+    description: "Máquina de lavar roupas com 12kg de capacidade, painel digital e 16 programas de lavagem.",
+    price: "2199.00",
+    originalPrice: "2799.00",
+    imageUrl: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600",
+    categorySlug: "eletrodomesticos",
+    stock: 8,
+    brand: "EltroBR",
     isFeatured: true,
-    specifications: { Tecido: "Jeans com Elastano", Tipo: "Skinny", "Fechamento": "Botão + Zíper" },
+    specifications: { Capacidade: "12kg", Programas: "16", "Tipo": "Carga Frontal", "Voltagem": "220V" },
   },
   {
-    name: "Tênis Running Performance",
-    description: "Tênis de corrida com tecnologia de amortecimento avançado. Solado antiderrapante e cabedal respirável.",
-    price: "399.90",
-    originalPrice: "549.90",
-    imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600",
-    categorySlug: "calcados",
-    stock: 30,
-    brand: "SportsBR",
-    isFeatured: true,
-    specifications: { "Amortecimento": "EVA Premium", "Solado": "Borracha antiderrapante", "Cabedal": "Mesh respirável" },
-  },
-  {
-    name: "Sandália Salto Fino Couro",
-    description: "Sandália feminina em couro legítimo com salto fino de 7cm. Elegante e confortável.",
-    price: "249.90",
-    originalPrice: "329.90",
-    imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600",
-    categorySlug: "calcados",
+    name: "Micro-ondas 30L com Grill",
+    description: "Micro-ondas com capacidade de 30 litros, função grill e 10 níveis de potência.",
+    price: "699.90",
+    originalPrice: "899.90",
+    imageUrl: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600",
+    categorySlug: "eletrodomesticos",
     stock: 25,
-    brand: "CalçadoBR",
-    specifications: { Material: "Couro legítimo", "Altura do salto": "7cm", "Cor": "Nude" },
-  },
-  {
-    name: "Tênis Casual Couro Masculino",
-    description: "Tênis casual masculino em couro genuíno com palmilha memory foam. Sofisticado e durável.",
-    price: "329.90",
-    imageUrl: "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=600",
-    categorySlug: "calcados",
-    stock: 20,
-    brand: "CalçadoBR",
-    isFeatured: true,
-    specifications: { Material: "Couro genuíno", Palmilha: "Memory foam", "Solado": "Borracha" },
+    brand: "EltroBR",
+    specifications: { Capacidade: "30L", "Função Grill": "Sim", "Potência": "1400W", "Voltagem": "127V" },
   },
   {
     name: "Smartphone 5G 256GB",
@@ -157,51 +123,82 @@ const coupons = [
   { code: "BLACK50", discountType: "percentage", discountValue: "50", maxUses: 50, expiresAt: new Date("2026-12-31") },
 ];
 
+const DEPRECATED_CATEGORY_SLUGS = ["roupas", "calcados"];
+
+async function removeDeprecatedCategories() {
+  const deprecated = await db.query.categoriesTable.findMany({
+    where: (t) => inArray(t.slug, DEPRECATED_CATEGORY_SLUGS),
+  });
+  if (deprecated.length === 0) return;
+
+  const ids = deprecated.map((c) => c.id);
+  await db.delete(productsTable).where(inArray(productsTable.categoryId, ids));
+  await db.delete(categoriesTable).where(inArray(categoriesTable.id, ids));
+  console.log(`Removed deprecated categories: ${deprecated.map((c) => c.slug).join(", ")}`);
+}
+
 async function seed() {
   console.log("Seeding database...");
 
-  // Check if already seeded
-  const existingCats = await db.select({ count: sql<number>`count(*)::int` }).from(categoriesTable);
-  if (existingCats[0].count > 0) {
-    console.log("Database already seeded, skipping...");
-    return;
+  // Step 1: Remove deprecated categories (and their products) from any existing DB
+  await removeDeprecatedCategories();
+
+  // Step 2: Upsert canonical categories — insert any that are missing by slug
+  const existingCats = await db.query.categoriesTable.findMany();
+  const existingSlugs = new Set(existingCats.map((c) => c.slug));
+  const missingCats = categories.filter(({ slug }) => !existingSlugs.has(slug));
+
+  let catMap = new Map(existingCats.map((c) => [c.slug, c.id]));
+
+  if (missingCats.length > 0) {
+    const inserted = await db.insert(categoriesTable)
+      .values(missingCats.map(({ name, slug, imageUrl }) => ({ name, slug, imageUrl })))
+      .returning();
+    console.log(`Inserted ${inserted.length} missing categories: ${inserted.map((c) => c.slug).join(", ")}`);
+    for (const c of inserted) catMap.set(c.slug, c.id);
+  } else {
+    console.log("All canonical categories already present, skipping category insert.");
   }
 
-  // Insert categories
-  const insertedCategories = await db.insert(categoriesTable).values(categories.map(({ name, slug, imageUrl }) => ({ name, slug, imageUrl }))).returning();
-  console.log(`Inserted ${insertedCategories.length} categories`);
+  // Step 3: Only insert products if the table is empty (fresh install)
+  const existingProducts = await db.select({ count: sql<number>`count(*)::int` }).from(productsTable);
+  if (existingProducts[0].count > 0) {
+    console.log("Products already exist, skipping product seed.");
+  } else {
+    const productValues = products.map((p) => ({
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      originalPrice: p.originalPrice ?? null,
+      imageUrl: p.imageUrl,
+      images: [],
+      categoryId: catMap.get(p.categorySlug)!,
+      stock: p.stock,
+      brand: p.brand ?? null,
+      isFeatured: p.isFeatured ?? false,
+      isActive: true,
+      specifications: p.specifications ?? null,
+    }));
 
-  const catMap = new Map(insertedCategories.map((c) => [c.slug, c.id]));
+    const insertedProducts = await db.insert(productsTable).values(productValues).returning();
+    console.log(`Inserted ${insertedProducts.length} products`);
+  }
 
-  // Insert products
-  const productValues = products.map((p) => ({
-    name: p.name,
-    description: p.description,
-    price: p.price,
-    originalPrice: p.originalPrice ?? null,
-    imageUrl: p.imageUrl,
-    images: [],
-    categoryId: catMap.get(p.categorySlug)!,
-    stock: p.stock,
-    brand: p.brand ?? null,
-    isFeatured: p.isFeatured ?? false,
-    isActive: true,
-    specifications: p.specifications ?? null,
-  }));
-
-  const insertedProducts = await db.insert(productsTable).values(productValues).returning();
-  console.log(`Inserted ${insertedProducts.length} products`);
-
-  // Insert coupons
-  const insertedCoupons = await db.insert(couponsTable).values(coupons.map(c => ({
-    code: c.code,
-    discountType: c.discountType,
-    discountValue: c.discountValue,
-    maxUses: c.maxUses ?? null,
-    expiresAt: c.expiresAt ?? null,
-    isActive: true,
-  }))).returning();
-  console.log(`Inserted ${insertedCoupons.length} coupons`);
+  // Step 4: Insert coupons only if table is empty
+  const existingCoupons = await db.select({ count: sql<number>`count(*)::int` }).from(couponsTable);
+  if (existingCoupons[0].count > 0) {
+    console.log("Coupons already exist, skipping coupon seed.");
+  } else {
+    const insertedCoupons = await db.insert(couponsTable).values(coupons.map((c) => ({
+      code: c.code,
+      discountType: c.discountType,
+      discountValue: c.discountValue,
+      maxUses: c.maxUses ?? null,
+      expiresAt: c.expiresAt ?? null,
+      isActive: true,
+    }))).returning();
+    console.log(`Inserted ${insertedCoupons.length} coupons`);
+  }
 
   console.log("Seeding complete!");
 }

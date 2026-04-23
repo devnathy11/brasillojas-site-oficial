@@ -38,21 +38,9 @@ export function Footer() {
               <Logo size={42} />
               <span className="font-bold text-lg">BRASILLOJAS</span>
             </div>
-            <p className="text-sm text-green-100 mb-4">
+            <p className="text-sm text-green-100">
               Sua loja online favorita com as melhores marcas e preços.
             </p>
-            <div className="flex gap-3">
-              {["Twitter", "Instagram", "Facebook"].map((social) => (
-                <a
-                  key={social}
-                  href="#"
-                  className="w-8 h-8 rounded-full bg-[#2E7D32] hover:bg-[#388E3C] flex items-center justify-center transition-colors"
-                  aria-label={social}
-                >
-                  <span className="text-xs font-bold">{social[0]}</span>
-                </a>
-              ))}
-            </div>
           </div>
         </div>
         <hr className="border-green-700 mt-10 mb-6" />
