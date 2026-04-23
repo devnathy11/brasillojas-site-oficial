@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { Printer, CheckCircle2, ArrowLeft, QrCode } from "lucide-react";
 import { useGetOrder } from "@workspace/api-client-react";
+import { useUser } from "@clerk/react";
 import { Header } from "@/components/Header";
 import logo from "@/assets/logo.jpg";
 import { formatBRL } from "@/lib/utils";
@@ -15,9 +16,10 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 export default function ReceiptPage() {
   const params = useParams<{ id: string }>();
-  const [location] = useLocation();
   const orderId = Number(params.id);
   const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } });
+  const { user } = useUser();
+  const customerName = user?.fullName ?? user?.firstName ?? null;
 
   // Auto-print when arriving from the checkout flow
   useEffect(() => {
@@ -119,6 +121,7 @@ export default function ReceiptPage() {
           {/* Address */}
           <div className="border-t-2 border-dashed border-gray-300 pt-3 mt-3 text-xs">
             <p className="font-bold mb-1">ENTREGA</p>
+            {customerName && <p className="font-semibold">{customerName}</p>}
             <p>{order.shippingAddress.street}, {order.shippingAddress.number}</p>
             {order.shippingAddress.complement && <p>{order.shippingAddress.complement}</p>}
             <p>{order.shippingAddress.neighborhood}</p>

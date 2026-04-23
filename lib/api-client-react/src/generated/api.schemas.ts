@@ -21,11 +21,9 @@ export interface Product {
   images: string[];
   categoryId: number;
   categoryName: string;
-  categorySlug?: string;
   stock: number;
   brand?: string | null;
   sku?: string | null;
-  barcode?: string | null;
   rating: number;
   reviewCount: number;
   isFeatured: boolean;
@@ -48,7 +46,6 @@ export interface CreateProductBody {
   stock: number;
   brand?: string | null;
   sku?: string | null;
-  barcode?: string | null;
   isFeatured?: boolean;
   specifications?: CreateProductBodySpecifications;
 }
@@ -66,7 +63,6 @@ export interface UpdateProductBody {
   stock?: number;
   brand?: string | null;
   sku?: string | null;
-  barcode?: string | null;
   isFeatured?: boolean;
   isActive?: boolean;
   specifications?: UpdateProductBodySpecifications;
@@ -100,11 +96,8 @@ export interface CartItem {
   name: string;
   imageUrl: string;
   price: number;
-  originalPrice?: number | null;
   quantity: number;
   stock: number;
-  categorySlug?: string;
-  categoryName?: string;
 }
 
 export interface Cart {
@@ -186,6 +179,8 @@ export interface Order {
   shippingAddress: Address;
   paymentMethod?: OrderPaymentMethod;
   paymentStatus?: OrderPaymentStatus;
+  customerName?: string | null;
+  customerEmail?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -234,17 +229,13 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  recoveryEmail?: string | null;
   phone?: string | null;
   address?: Address | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface UpdateUserProfileBody {
   name?: string;
-  email?: string;
-  recoveryEmail?: string | null;
   phone?: string | null;
   address?: Address | null;
 }

@@ -362,6 +362,8 @@ export const ListOrdersResponseItem = zod.object({
     .enum(["pix", "credit_card", "debit_card", "boleto"])
     .optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  customerName: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -426,6 +428,8 @@ export const ListAllOrdersResponseItem = zod.object({
     .enum(["pix", "credit_card", "debit_card", "boleto"])
     .optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  customerName: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -475,6 +479,8 @@ export const GetOrderResponse = zod.object({
     .enum(["pix", "credit_card", "debit_card", "boleto"])
     .optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  customerName: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

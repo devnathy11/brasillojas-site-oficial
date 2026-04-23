@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db } from "@workspace/db";
-import { ordersTable, cartItemsTable, productsTable, couponsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { ordersTable, cartItemsTable, productsTable, couponsTable, usersTable } from "@workspace/db";
+import { eq, desc, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -48,14 +48,60 @@ router.get("/orders", async (req, res) => {
   }
 });
 
+async function requireAdmin(req: any, res: any, userId: string): Promise<boolean> {
+  try {
+    const user = await clerkClient.users.getUser(userId);
+
+    // Prefer Clerk publicMetadata role (set via Clerk Dashboard: publicMetadata.role = "admin")
+    if (user.publicMetadata?.role === "admin") return true;
+
+    // Fallback: check ADMIN_EMAIL env var (case-insensitive)
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      const emails = user.emailAddresses.map((e) => e.emailAddress.toLowerCase());
+      if (emails.includes(adminEmail.toLowerCase())) return true;
+    }
+
+    res.status(403).json({ error: "Admin access required" });
+    return false;
+  } catch {
+    res.status(500).json({ error: "Admin authorization check failed" });
+    return false;
+  }
+}
+
 // GET /api/orders/all (admin)
 router.get("/orders/all", async (req, res) => {
   const userId = requireAuth(req, res);
   if (!userId) return;
 
+  if (!(await requireAdmin(req, res, userId))) return;
+
   try {
     const orders = await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
-    res.json(orders.map(mapOrder));
+
+    // Fetch user profiles for all unique buyer IDs
+    const uniqueUserIds = [...new Set(orders.map((o) => o.userId))];
+    const profiles =
+      uniqueUserIds.length > 0
+        ? await db
+            .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+            .from(usersTable)
+            .where(inArray(usersTable.id, uniqueUserIds))
+        : [];
+
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+    const result = orders.map((order) => {
+      const profile = profileMap.get(order.userId);
+      return {
+        ...mapOrder(order),
+        customerName: profile?.name ?? null,
+        customerEmail: profile?.email ?? null,
+      };
+    });
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

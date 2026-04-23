@@ -23,6 +23,8 @@ export interface Order {
   shippingAddress: Address;
   paymentMethod?: OrderPaymentMethod;
   paymentStatus?: OrderPaymentStatus;
+  customerName?: string | null;
+  customerEmail?: string | null;
   createdAt: string;
   updatedAt: string;
 }

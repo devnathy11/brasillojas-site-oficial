@@ -827,6 +827,12 @@ components:
         paymentStatus:
           type: string
           enum: [pending, paid, failed, refunded]
+        customerName:
+          type: string
+          nullable: true
+        customerEmail:
+          type: string
+          nullable: true
         createdAt:
           type: string
         updatedAt:
