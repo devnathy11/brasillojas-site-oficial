@@ -3,11 +3,13 @@ import { useLocation } from "wouter";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 
 export default function PaymentSuccessPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("Confirmando pagamento...");
 
@@ -23,11 +25,15 @@ export default function PaymentSuccessPage() {
 
     const apiBase = import.meta.env.VITE_API_URL ?? "";
 
+    getToken().then((token) =>
     fetch(`${apiBase}/api/stripe/complete-order`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ sessionId }),
-    })
+    }))
       .then(async (res) => {
         if (res.status === 409) {
           // Already processed — redirect to orders
@@ -53,7 +59,7 @@ export default function PaymentSuccessPage() {
         setStatus("error");
         setMessage(err.message ?? "Erro ao processar pagamento.");
       });
-  }, [setLocation, queryClient]);
+  }, [setLocation, queryClient, getToken]);
 
   return (
     <div className="min-h-screen bg-gray-50">

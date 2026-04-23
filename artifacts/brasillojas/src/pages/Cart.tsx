@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, CreditCard, QrCode, FileText, Wallet } from "lucide-react";
 import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useCreateOrder } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
-import { Show } from "@clerk/react";
+import { Show, useAuth } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -30,6 +30,7 @@ export default function CartPage() {
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeError, setStripeError] = useState("");
   const [, setLocation] = useLocation();
+  const { getToken } = useAuth();
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } });
   const updateItem = useUpdateCartItem();
@@ -74,9 +75,13 @@ export default function CartPage() {
     if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
       setStripeLoading(true);
       try {
+        const token = await getToken();
         const res = await fetch("/api/stripe/create-checkout-session", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             shippingAddress: address,
             couponCode: appliedCoupon || undefined,

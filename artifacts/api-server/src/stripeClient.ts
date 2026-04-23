@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { StripeSync } from "stripe-replit-sync";
 
-async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecret?: string }> {
+async function getCredentials(): Promise<{ publishableKey: string; secretKey: string }> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -15,40 +15,63 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
     );
   }
 
-  const resp = await fetch(
-    `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=stripe`,
-    {
-      headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken },
-      signal: AbortSignal.timeout(10_000),
-    }
-  );
+  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  const targetEnvironment = isProduction ? "production" : "development";
 
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch Stripe credentials: ${resp.status}`);
+  const url = new URL(`https://${hostname}/api/v2/connection`);
+  url.searchParams.set("include_secrets", "true");
+  url.searchParams.set("connector_names", "stripe");
+  url.searchParams.set("environment", targetEnvironment);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "X-Replit-Token": xReplitToken,
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Stripe credentials: ${response.status}`);
   }
 
-  const data = await resp.json();
+  const data = await response.json();
   const settings = data.items?.[0]?.settings;
 
-  if (!settings?.secret_key) {
-    throw new Error("Stripe integration missing secret key. Connect Stripe via Integrations tab.");
+  if (!settings?.publishable || !settings?.secret) {
+    throw new Error(
+      `Stripe ${targetEnvironment} connection not found or missing keys.`
+    );
   }
 
-  return { secretKey: settings.secret_key, webhookSecret: settings.webhook_secret };
+  return { publishableKey: settings.publishable, secretKey: settings.secret };
 }
 
+/** Fresh Stripe client — never cached, so rotated keys are always picked up. */
 export async function getUncachableStripeClient(): Promise<Stripe> {
-  const { secretKey } = await getStripeCredentials();
-  return new Stripe(secretKey);
+  const { secretKey } = await getCredentials();
+  return new Stripe(secretKey, { apiVersion: "2025-08-27.basil" as any });
 }
+
+export async function getStripePublishableKey(): Promise<string> {
+  const { publishableKey } = await getCredentials();
+  return publishableKey;
+}
+
+let _stripeSyncInstance: StripeSync | null = null;
 
 export async function getStripeSync(): Promise<StripeSync> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL required");
-  const { secretKey, webhookSecret } = await getStripeCredentials();
-  return new StripeSync({
-    poolConfig: { connectionString: databaseUrl },
-    stripeSecretKey: secretKey,
-    stripeWebhookSecret: webhookSecret ?? "",
-  });
+
+  // Always re-fetch secret key so rotated credentials are used
+  const { secretKey } = await getCredentials();
+
+  if (!_stripeSyncInstance) {
+    _stripeSyncInstance = new StripeSync({
+      poolConfig: { connectionString: databaseUrl, max: 2 },
+      stripeSecretKey: secretKey,
+    });
+  }
+  return _stripeSyncInstance;
 }
