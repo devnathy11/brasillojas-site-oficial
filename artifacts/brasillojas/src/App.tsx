@@ -1,3 +1,4 @@
+import comprovante from "@/pages/comprovante";
 import { useEffect, useRef } from "react";
 import {
   ClerkProvider,
@@ -192,6 +193,7 @@ function HomeRedirect() {
 function Router() {
   return (
     <Switch>
+      <Route path="/comprovante" component={comprovante} />
       <Route path="/" component={HomeRedirect} />
       <Route path="/products" component={ProductsPage} />
       <Route path="/products/:id" component={ProductDetailPage} />
