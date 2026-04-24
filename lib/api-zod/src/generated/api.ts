@@ -335,6 +335,10 @@ export const ListOrdersResponseItem = zod.object({
     "shipped",
     "delivered",
     "cancelled",
+    "criando",
+    "processando",
+    "saiu_para_entrega",
+    "entregue",
   ]),
   items: zod.array(
     zod.object({
@@ -401,6 +405,10 @@ export const ListAllOrdersResponseItem = zod.object({
     "shipped",
     "delivered",
     "cancelled",
+    "criando",
+    "processando",
+    "saiu_para_entrega",
+    "entregue",
   ]),
   items: zod.array(
     zod.object({
@@ -452,6 +460,10 @@ export const GetOrderResponse = zod.object({
     "shipped",
     "delivered",
     "cancelled",
+    "criando",
+    "processando",
+    "saiu_para_entrega",
+    "entregue",
   ]),
   items: zod.array(
     zod.object({

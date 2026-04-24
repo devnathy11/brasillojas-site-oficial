@@ -376,6 +376,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /orders/{id}/status:
+    put:
+      operationId: updateOrderStatus
+      tags: [orders, admin]
+      summary: Advance order status (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}/confirm-delivery:
+    put:
+      operationId: confirmDelivery
+      tags: [orders]
+      summary: Confirm delivery (customer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
   /reviews:
     post:
       operationId: createReview
@@ -805,7 +843,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, confirmed, processing, shipped, delivered, cancelled]
+          enum: [pending, confirmed, processing, shipped, delivered, cancelled, criando, processando, saiu_para_entrega, entregue]
         items:
           type: array
           items:

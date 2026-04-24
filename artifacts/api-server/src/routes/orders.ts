@@ -6,6 +6,13 @@ import { eq, desc, inArray } from "drizzle-orm";
 
 const router = Router();
 
+const STATUS_PROGRESSION: Record<string, string | null> = {
+  criando: "processando",
+  processando: "saiu_para_entrega",
+  saiu_para_entrega: null,
+  entregue: null,
+};
+
 function requireAuth(req: any, res: any): string | null {
   const { userId } = getAuth(req);
   if (!userId) {
@@ -52,10 +59,8 @@ async function requireAdmin(req: any, res: any, userId: string): Promise<boolean
   try {
     const user = await clerkClient.users.getUser(userId);
 
-    // Prefer Clerk publicMetadata role (set via Clerk Dashboard: publicMetadata.role = "admin")
     if (user.publicMetadata?.role === "admin") return true;
 
-    // Fallback: check ADMIN_EMAIL env var (case-insensitive)
     const adminEmail = process.env.ADMIN_EMAIL;
     if (adminEmail) {
       const emails = user.emailAddresses.map((e) => e.emailAddress.toLowerCase());
@@ -80,7 +85,6 @@ router.get("/orders/all", async (req, res) => {
   try {
     const orders = await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
 
-    // Fetch user profiles for all unique buyer IDs
     const uniqueUserIds = [...new Set(orders.map((o) => o.userId))];
     const profiles =
       uniqueUserIds.length > 0
@@ -102,6 +106,64 @@ router.get("/orders/all", async (req, res) => {
     });
 
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /api/orders/:id/status (admin only — advances status, cannot set entregue)
+router.put("/orders/:id/status", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  if (!(await requireAdmin(req, res, userId))) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    const order = await db.query.ordersTable.findFirst({ where: eq(ordersTable.id, id) });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const nextStatus = STATUS_PROGRESSION[order.status];
+    if (nextStatus === undefined) {
+      return res.status(400).json({ error: "Status atual não pode ser avançado pelo admin" });
+    }
+    if (nextStatus === null) {
+      return res.status(400).json({ error: "Pedido já está no status máximo permitido para o admin" });
+    }
+
+    const [updated] = await db
+      .update(ordersTable)
+      .set({ status: nextStatus, updatedAt: new Date() })
+      .where(eq(ordersTable.id, id))
+      .returning();
+
+    res.json(mapOrder(updated));
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /api/orders/:id/confirm-delivery (customer only)
+router.put("/orders/:id/confirm-delivery", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    const order = await db.query.ordersTable.findFirst({ where: eq(ordersTable.id, id) });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (order.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+    if (order.status !== "saiu_para_entrega") {
+      return res.status(400).json({ error: "Só é possível confirmar entrega quando o pedido estiver a caminho" });
+    }
+
+    const [updated] = await db
+      .update(ordersTable)
+      .set({ status: "entregue", updatedAt: new Date() })
+      .where(eq(ordersTable.id, id))
+      .returning();
+
+    res.json(mapOrder(updated));
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -131,7 +193,6 @@ router.post("/orders", async (req, res) => {
   try {
     const { shippingAddress, couponCode, paymentMethod = "pix" } = req.body;
 
-    // Get cart items
     const cartItems = await db
       .select({ cartItem: cartItemsTable, product: productsTable })
       .from(cartItemsTable)
@@ -168,17 +229,14 @@ router.post("/orders", async (req, res) => {
 
     const total = Math.max(0, subtotal - discount);
 
-    // Simulated payment processing: PIX & boleto stay pending until "confirmed",
-    // card payments are auto-approved instantly (sandbox).
     const validMethods = ["pix", "credit_card", "debit_card", "boleto"];
     const method = validMethods.includes(paymentMethod) ? paymentMethod : "pix";
     const paymentStatus =
       method === "credit_card" || method === "debit_card" ? "paid" : "pending";
-    const orderStatus = paymentStatus === "paid" ? "confirmed" : "pending";
 
     const [order] = await db.insert(ordersTable).values({
       userId,
-      status: orderStatus,
+      status: "criando",
       items,
       subtotal: subtotal.toFixed(2),
       discount: discount.toFixed(2),
@@ -189,7 +247,6 @@ router.post("/orders", async (req, res) => {
       paymentStatus,
     }).returning();
 
-    // Clear cart
     await db.delete(cartItemsTable).where(eq(cartItemsTable.userId, userId));
 
     res.status(201).json(mapOrder(order));

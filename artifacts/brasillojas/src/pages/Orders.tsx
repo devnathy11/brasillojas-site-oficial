@@ -1,10 +1,25 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Package, ChevronRight, CheckCircle2, Clock } from "lucide-react";
+import { Package, ChevronRight, CheckCircle2, Circle, Truck, ShoppingBag, PackageCheck, Clock } from "lucide-react";
 import { useListOrders } from "@workspace/api-client-react";
+import type { Order } from "@workspace/api-client-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { formatBRL, formatDate } from "@/lib/utils";
+
+const TRACKING_STEPS = [
+  { key: "criando", label: "Criando seu produto", icon: ShoppingBag },
+  { key: "processando", label: "Em processamento", icon: Package },
+  { key: "saiu_para_entrega", label: "Saiu para entrega", icon: Truck },
+  { key: "entregue", label: "Entregue", icon: PackageCheck },
+];
+
+const STEP_INDEX: Record<string, number> = {
+  criando: 0,
+  processando: 1,
+  saiu_para_entrega: 2,
+  entregue: 3,
+};
 
 const statusLabel: Record<string, string> = {
   pending: "Aguardando",
@@ -13,6 +28,10 @@ const statusLabel: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  criando: "Criando seu produto",
+  processando: "Em processamento",
+  saiu_para_entrega: "Saiu para entrega",
+  entregue: "Entregue",
 };
 
 const statusColor: Record<string, string> = {
@@ -22,6 +41,10 @@ const statusColor: Record<string, string> = {
   shipped: "bg-indigo-100 text-indigo-800",
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
+  criando: "bg-orange-100 text-orange-800",
+  processando: "bg-purple-100 text-purple-800",
+  saiu_para_entrega: "bg-blue-100 text-blue-800",
+  entregue: "bg-green-100 text-green-800",
 };
 
 function PaymentStatusBadge({ status }: { status?: string | null }) {
@@ -37,6 +60,61 @@ function PaymentStatusBadge({ status }: { status?: string | null }) {
       <Clock size={11} /> Aguardando Pagamento
     </span>
   );
+}
+
+function OrderTracker({ status }: { status: string }) {
+  const currentIndex = STEP_INDEX[status] ?? -1;
+  if (currentIndex === -1) return null;
+
+  return (
+    <div className="mt-4 mb-1">
+      <div className="flex items-start justify-between gap-1">
+        {TRACKING_STEPS.map((step, i) => {
+          const done = i < currentIndex;
+          const active = i === currentIndex;
+          const Icon = step.icon;
+          return (
+            <div key={step.key} className="flex flex-col items-center flex-1 min-w-0">
+              <div className="relative flex items-center w-full">
+                {i > 0 && (
+                  <div
+                    className={`absolute left-0 right-1/2 top-1/2 h-0.5 -translate-y-1/2 ${done || active ? "bg-[#1B5E20]" : "bg-gray-200"}`}
+                  />
+                )}
+                {i < TRACKING_STEPS.length - 1 && (
+                  <div
+                    className={`absolute left-1/2 right-0 top-1/2 h-0.5 -translate-y-1/2 ${done ? "bg-[#1B5E20]" : "bg-gray-200"}`}
+                  />
+                )}
+                <div className="relative z-10 mx-auto">
+                  {done ? (
+                    <div className="w-8 h-8 rounded-full bg-[#1B5E20] flex items-center justify-center">
+                      <CheckCircle2 size={16} className="text-white" />
+                    </div>
+                  ) : active ? (
+                    <div className="w-8 h-8 rounded-full bg-[#1B5E20] flex items-center justify-center ring-4 ring-green-100">
+                      <Icon size={14} className="text-white" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                      <Icon size={14} className="text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className={`text-[10px] text-center mt-1.5 leading-tight px-0.5 ${active ? "font-bold text-[#1B5E20]" : done ? "text-gray-600" : "text-gray-400"}`}>
+                {step.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function isTrackedStatus(status: string) {
+  return status in STEP_INDEX;
 }
 
 export default function OrdersPage() {
@@ -87,7 +165,11 @@ export default function OrdersPage() {
                   </span>
                 </div>
 
-                <div className="flex gap-2 mb-3 overflow-x-auto">
+                {isTrackedStatus(order.status) && (
+                  <OrderTracker status={order.status} />
+                )}
+
+                <div className="flex gap-2 mt-3 mb-3 overflow-x-auto">
                   {order.items.slice(0, 3).map((item) => (
                     <img key={item.productId} src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded border border-gray-100 flex-shrink-0" />
                   ))}
@@ -106,8 +188,8 @@ export default function OrdersPage() {
                       <PaymentStatusBadge status={order.paymentStatus} />
                     </div>
                   </div>
-                  <Link href={`/order-confirmation/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
-                    Ver pedido <ChevronRight size={14} />
+                  <Link href={`/receipt/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
+                    {order.status === "saiu_para_entrega" ? "Confirmar entrega" : "Ver comprovante"} <ChevronRight size={14} />
                   </Link>
                 </div>
               </motion.div>

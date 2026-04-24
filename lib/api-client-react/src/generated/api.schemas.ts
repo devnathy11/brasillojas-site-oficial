@@ -135,6 +135,10 @@ export const OrderStatus = {
   shipped: "shipped",
   delivered: "delivered",
   cancelled: "cancelled",
+  criando: "criando",
+  processando: "processando",
+  saiu_para_entrega: "saiu_para_entrega",
+  entregue: "entregue",
 } as const;
 
 export type OrderPaymentMethod =

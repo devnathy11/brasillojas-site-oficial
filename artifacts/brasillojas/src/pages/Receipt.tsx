@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
-import { Printer, CheckCircle2, ArrowLeft, QrCode } from "lucide-react";
-import { useGetOrder } from "@workspace/api-client-react";
+import { Printer, CheckCircle2, ArrowLeft, QrCode, Truck, PackageCheck, ShoppingBag, Package } from "lucide-react";
+import { useGetOrder, useConfirmDelivery } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { Header } from "@/components/Header";
 import logo from "@/assets/logo.jpg";
@@ -14,25 +15,116 @@ const PAYMENT_LABELS: Record<string, string> = {
   boleto: "Boleto Bancário",
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  criando: "Criando seu produto",
+  processando: "Em processamento",
+  saiu_para_entrega: "Saiu para entrega",
+  entregue: "Entregue",
+  pending: "Aguardando pagamento",
+  confirmed: "Confirmado",
+};
+
+const TRACKING_STEPS = [
+  { key: "criando", label: "Criando seu produto", icon: ShoppingBag },
+  { key: "processando", label: "Em processamento", icon: Package },
+  { key: "saiu_para_entrega", label: "Saiu para entrega", icon: Truck },
+  { key: "entregue", label: "Entregue", icon: PackageCheck },
+];
+
+const STEP_INDEX: Record<string, number> = {
+  criando: 0,
+  processando: 1,
+  saiu_para_entrega: 2,
+  entregue: 3,
+};
+
+function OrderTracker({ status }: { status: string }) {
+  const currentIndex = STEP_INDEX[status] ?? -1;
+  if (currentIndex === -1) return null;
+
+  return (
+    <div className="mt-2 mb-4">
+      <p className="text-xs font-semibold text-gray-600 mb-3">Rastreamento do pedido</p>
+      <div className="flex items-start justify-between gap-1">
+        {TRACKING_STEPS.map((step, i) => {
+          const done = i < currentIndex;
+          const active = i === currentIndex;
+          const Icon = step.icon;
+          return (
+            <div key={step.key} className="flex flex-col items-center flex-1 min-w-0">
+              <div className="relative flex items-center w-full">
+                {i > 0 && (
+                  <div className={`absolute left-0 right-1/2 top-1/2 h-0.5 -translate-y-1/2 ${done || active ? "bg-[#1B5E20]" : "bg-gray-200"}`} />
+                )}
+                {i < TRACKING_STEPS.length - 1 && (
+                  <div className={`absolute left-1/2 right-0 top-1/2 h-0.5 -translate-y-1/2 ${done ? "bg-[#1B5E20]" : "bg-gray-200"}`} />
+                )}
+                <div className="relative z-10 mx-auto">
+                  {done ? (
+                    <div className="w-7 h-7 rounded-full bg-[#1B5E20] flex items-center justify-center">
+                      <CheckCircle2 size={14} className="text-white" />
+                    </div>
+                  ) : active ? (
+                    <div className="w-7 h-7 rounded-full bg-[#1B5E20] flex items-center justify-center ring-4 ring-green-100">
+                      <Icon size={12} className="text-white" />
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center">
+                      <Icon size={12} className="text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className={`text-[10px] text-center mt-1.5 leading-tight px-0.5 ${active ? "font-bold text-[#1B5E20]" : done ? "text-gray-600" : "text-gray-400"}`}>
+                {step.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function ReceiptPage() {
   const params = useParams<{ id: string }>();
   const orderId = Number(params.id);
   const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } });
   const { user } = useUser();
   const customerName = user?.fullName ?? user?.firstName ?? null;
+  const queryClient = useQueryClient();
 
-  // Auto-print when arriving from the checkout flow
+  const [confirmed, setConfirmed] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const { mutate: doConfirmDelivery, isPending: isConfirming } = useConfirmDelivery();
+
   useEffect(() => {
     if (!order || isLoading) return;
     const key = "bl_autoprint_order";
     const pending = sessionStorage.getItem(key);
     if (pending === String(orderId)) {
       sessionStorage.removeItem(key);
-      // Small delay so the page renders before the print dialog
       const t = setTimeout(() => window.print(), 700);
       return () => clearTimeout(t);
     }
   }, [order, isLoading, orderId]);
+
+  function handleConfirmDelivery() {
+    setConfirmError(null);
+    doConfirmDelivery(
+      { id: orderId },
+      {
+        onSuccess: () => {
+          setConfirmed(true);
+          queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}`] });
+          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+        },
+        onError: (err: unknown) => {
+          setConfirmError(err instanceof Error ? err.message : "Não foi possível confirmar a entrega. Tente novamente.");
+        },
+      }
+    );
+  }
 
   if (isLoading || !order) {
     return (
@@ -48,6 +140,8 @@ export default function ReceiptPage() {
   const paid = order.paymentStatus === "paid";
   const fakePixCode = `00020126580014BR.GOV.BCB.PIX0136brasillojas-${order.id}-${Date.now().toString(36)}5204000053039865802BR5910BRASILLOJAS6009SAO PAULO62070503***6304ABCD`;
   const fakeBoleto = `34191.79001 01043.510047 91020.150008 1 ${String(Date.now()).slice(-14)}`;
+  const isDeliveryPending = order.status === "saiu_para_entrega" && !confirmed;
+  const isDelivered = order.status === "entregue" || confirmed;
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
@@ -69,6 +163,48 @@ export default function ReceiptPage() {
           </button>
         </div>
 
+        {/* Order Status Tracker */}
+        {STEP_INDEX[order.status] !== undefined && (
+          <div className="no-print bg-white rounded-lg border border-gray-200 p-4 mb-4">
+            <OrderTracker status={confirmed ? "entregue" : order.status} />
+          </div>
+        )}
+
+        {/* Confirm Delivery Banner */}
+        {isDeliveryPending && (
+          <div className="no-print mb-4 bg-blue-50 border border-blue-200 rounded-lg p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <Truck size={24} className="text-blue-600 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-blue-900">Seu pedido chegou?</p>
+                <p className="text-sm text-blue-700">Confirme o recebimento para finalizar seu pedido.</p>
+              </div>
+            </div>
+            {confirmError && (
+              <p className="text-sm text-red-600 mb-3">{confirmError}</p>
+            )}
+            <button
+              onClick={handleConfirmDelivery}
+              disabled={isConfirming}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <PackageCheck size={18} />
+              {isConfirming ? "Confirmando..." : "Confirmar Recebimento"}
+            </button>
+          </div>
+        )}
+
+        {/* Thank-you confirmation */}
+        {isDelivered && (
+          <div className="no-print mb-4 bg-green-50 border border-green-200 rounded-lg p-5 flex items-center gap-3">
+            <CheckCircle2 size={28} className="text-green-600 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-green-900">Entrega confirmada!</p>
+              <p className="text-sm text-green-700">Obrigado por comprar na BrasilLojas. Esperamos te ver novamente!</p>
+            </div>
+          </div>
+        )}
+
         {/* Receipt */}
         <div className="bg-white rounded-lg shadow print:shadow-none print:rounded-none border border-gray-200 print:border-0 p-6 print:p-4 font-mono text-sm receipt">
           {/* Header */}
@@ -85,6 +221,14 @@ export default function ReceiptPage() {
             <CheckCircle2 size={18} />
             {paid ? "PAGAMENTO APROVADO" : "AGUARDANDO PAGAMENTO"}
           </div>
+
+          {/* Order status */}
+          {STATUS_LABELS[order.status] && (
+            <div className="flex items-center gap-2 justify-center mb-4 text-xs text-gray-600">
+              <span className="font-semibold">Status do pedido:</span>
+              <span>{STATUS_LABELS[order.status] ?? order.status}</span>
+            </div>
+          )}
 
           {/* Meta */}
           <div className="mb-4 space-y-1 text-xs">

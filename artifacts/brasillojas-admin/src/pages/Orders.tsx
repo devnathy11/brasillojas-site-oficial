@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShoppingBag, Printer } from "lucide-react";
-import { useListAllOrders } from "@workspace/api-client-react";
+import { ShoppingBag, Printer, ChevronRight } from "lucide-react";
+import { useListAllOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Order } from "@workspace/api-client-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 
@@ -11,6 +13,10 @@ const statusLabel: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  criando: "Criando produto",
+  processando: "Em processamento",
+  saiu_para_entrega: "Saiu para entrega",
+  entregue: "Entregue",
 };
 
 const statusColor: Record<string, string> = {
@@ -20,6 +26,10 @@ const statusColor: Record<string, string> = {
   shipped: "bg-indigo-100 text-indigo-800",
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
+  criando: "bg-orange-100 text-orange-800",
+  processando: "bg-purple-100 text-purple-800",
+  saiu_para_entrega: "bg-blue-100 text-blue-800",
+  entregue: "bg-green-100 text-green-800",
 };
 
 const paymentLabel: Record<string, string> = {
@@ -27,6 +37,11 @@ const paymentLabel: Record<string, string> = {
   credit_card: "Cartão de Crédito",
   debit_card: "Cartão de Débito",
   boleto: "Boleto Bancário",
+};
+
+const NEXT_STATUS_LABEL: Record<string, string> = {
+  criando: "Mover para: Em processamento",
+  processando: "Mover para: Saiu para entrega",
 };
 
 type OrderWithCustomer = Order;
@@ -186,6 +201,44 @@ function buildReceiptHtml(order: OrderWithCustomer): string {
 </html>`;
 }
 
+function AdvanceStatusButton({ order }: { order: OrderWithCustomer }) {
+  const queryClient = useQueryClient();
+  const { mutate, isPending } = useUpdateOrderStatus();
+  const [error, setError] = useState<string | null>(null);
+
+  const nextLabel = NEXT_STATUS_LABEL[order.status];
+  if (!nextLabel) return null;
+
+  function handleAdvance() {
+    setError(null);
+    mutate(
+      { id: order.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/orders/all"] });
+        },
+        onError: (err: unknown) => {
+          setError(err instanceof Error ? err.message : "Erro ao atualizar status");
+        },
+      }
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        onClick={handleAdvance}
+        disabled={isPending}
+        className="flex items-center gap-1 text-xs bg-[#1B5E20] hover:bg-[#2E7D32] disabled:opacity-60 text-white px-2.5 py-1.5 rounded-md font-semibold transition-colors whitespace-nowrap"
+      >
+        <ChevronRight size={12} />
+        {isPending ? "Atualizando..." : nextLabel}
+      </button>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 export default function OrdersPage() {
   const { data: orders, isLoading } = useListAllOrders();
   const typedOrders = (orders ?? []) as OrderWithCustomer[];
@@ -248,7 +301,7 @@ export default function OrdersPage() {
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Pagamento</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Total</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Status</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -283,13 +336,16 @@ export default function OrdersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handlePrintReceipt(order)}
-                        title="Imprimir Comprovante"
-                        className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
-                      >
-                        <Printer size={15} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePrintReceipt(order)}
+                          title="Imprimir Comprovante"
+                          className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
+                        >
+                          <Printer size={15} />
+                        </button>
+                        <AdvanceStatusButton order={order} />
+                      </div>
                     </td>
                   </motion.tr>
                 ))}

@@ -135,7 +135,7 @@ router.post("/stripe/complete-order", async (req, res) => {
 
     const [order] = await db.insert(ordersTable).values({
       userId,
-      status: "confirmed",
+      status: "criando",
       items,
       subtotal: subtotal.toFixed(2),
       discount: Math.max(0, subtotal - stripeTotal).toFixed(2),
