@@ -18,10 +18,10 @@ export function Footer() {
           <div>
             <h3 className="font-bold text-sm uppercase tracking-wider mb-4 text-green-200">Atendimento</h3>
             <ul className="space-y-2 text-sm text-green-100">
-              <li><a href="#" className="hover:text-white transition-colors">Central de Ajuda</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Como Comprar</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Entrega</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Trocas e Devoluções</a></li>
+              <li><Link href="/suporte/central" className="hover:text-white transition-colors">Central de Atendimento</Link></li>
+              <li><Link href="/suporte/como-comprar" className="hover:text-white transition-colors">Como Comprar</Link></li>
+              <li><Link href="/suporte/entrega" className="hover:text-white transition-colors">Entrega</Link></li>
+              <li><Link href="/suporte/trocas" className="hover:text-white transition-colors">Trocas e Devoluções</Link></li>
             </ul>
           </div>
           <div>

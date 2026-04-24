@@ -1,4 +1,8 @@
 import comprovante from "@/pages/comprovante";
+import CentralPage from "@/pages/suporte/Central";
+import ComoComprarPage from "@/pages/suporte/ComoComprar";
+import EntregaPage from "@/pages/suporte/Entrega";
+import TrocasPage from "@/pages/suporte/Trocas";
 import { useEffect, useRef } from "react";
 import {
   ClerkProvider,
@@ -187,7 +191,7 @@ function isProfileComplete(profile: UserProfile | undefined): boolean {
   );
 }
 
-const PROFILE_EXEMPT_PATHS = ["/profile", "/sign-in", "/sign-up"];
+const PROFILE_EXEMPT_PATHS = ["/profile", "/sign-in", "/sign-up", "/suporte"];
 
 function ProfileCompletionGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
@@ -252,6 +256,10 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute component={ProfilePage} />
       </Route>
+      <Route path="/suporte/central" component={CentralPage} />
+      <Route path="/suporte/como-comprar" component={ComoComprarPage} />
+      <Route path="/suporte/entrega" component={EntregaPage} />
+      <Route path="/suporte/trocas" component={TrocasPage} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
       <Route component={NotFound} />
