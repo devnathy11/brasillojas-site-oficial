@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import DashboardPage from "@/pages/Dashboard";
 import ProductsPage from "@/pages/Products";
 import OrdersPage from "@/pages/Orders";
+import OrderDetailPage from "@/pages/OrderDetail";
 import CouponsPage from "@/pages/Coupons";
 import { AdminLayout } from "@/components/AdminLayout";
 
@@ -103,6 +104,7 @@ function Router() {
             <Switch>
               <Route path="/" component={DashboardPage} />
               <Route path="/products" component={ProductsPage} />
+              <Route path="/orders/:id" component={OrderDetailPage} />
               <Route path="/orders" component={OrdersPage} />
               <Route path="/coupons" component={CouponsPage} />
               <Route component={NotFound} />

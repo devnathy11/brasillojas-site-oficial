@@ -111,6 +111,37 @@ router.get("/orders/all", async (req, res) => {
   }
 });
 
+// GET /api/orders/all/:id (admin — single order with customer info)
+router.get("/orders/all/:id", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  if (!(await requireAdmin(req, res, userId))) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid order id" });
+
+    const order = await db.query.ordersTable.findFirst({ where: eq(ordersTable.id, id) });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const profiles = await db
+      .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, order.userId));
+
+    const profile = profiles[0] ?? null;
+
+    res.json({
+      ...mapOrder(order),
+      customerName: profile?.name ?? null,
+      customerEmail: profile?.email ?? null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // PUT /api/orders/:id/status (admin only — advances status, cannot set entregue)
 router.put("/orders/:id/status", async (req, res) => {
   const userId = requireAuth(req, res);

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShoppingBag, Printer, ChevronRight } from "lucide-react";
+import { ShoppingBag, Printer, ChevronRight, Eye } from "lucide-react";
 import { useListAllOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import type { Order } from "@workspace/api-client-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 
@@ -242,6 +243,7 @@ function AdvanceStatusButton({ order }: { order: OrderWithCustomer }) {
 export default function OrdersPage() {
   const { data: orders, isLoading } = useListAllOrders();
   const typedOrders = (orders ?? []) as OrderWithCustomer[];
+  const [, setLocation] = useLocation();
 
   function handlePrintReceipt(order: OrderWithCustomer) {
     const html = buildReceiptHtml(order);
@@ -311,7 +313,8 @@ export default function OrdersPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.03 }}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => setLocation(`/orders/${order.id}`)}
                   >
                     <td className="px-4 py-3 text-sm font-semibold text-gray-800">#{order.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDate(order.createdAt)}</td>
@@ -335,8 +338,15 @@ export default function OrdersPage() {
                         {statusLabel[order.status] ?? order.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setLocation(`/orders/${order.id}`)}
+                          title="Ver detalhes"
+                          className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
+                        >
+                          <Eye size={15} />
+                        </button>
                         <button
                           onClick={() => handlePrintReceipt(order)}
                           title="Imprimir Comprovante"
