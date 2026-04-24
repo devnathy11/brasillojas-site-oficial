@@ -62,7 +62,7 @@ function HeroBanner() {
   const banner = banners[current];
 
   return (
-    <div className="relative overflow-hidden rounded-none sm:rounded-lg h-64 sm:h-96 lg:h-[28rem] mx-0 sm:mx-0">
+    <div className="relative overflow-hidden rounded-none sm:rounded-lg h-56 sm:h-96 lg:h-[28rem] mx-0 sm:mx-0">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -78,7 +78,7 @@ function HeroBanner() {
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-          <div className="relative max-w-7xl mx-auto px-8 w-full h-full flex items-center">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-8 w-full h-full flex items-center">
             <div className="max-w-md">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}

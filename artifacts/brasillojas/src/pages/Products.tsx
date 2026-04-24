@@ -115,16 +115,16 @@ export default function ProductsPage() {
           {/* Product grid */}
           <div className="flex-1 min-w-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-4 bg-white rounded-lg border border-gray-200 px-4 py-2.5">
-              <p className="text-sm text-gray-600">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4 bg-white rounded-lg border border-gray-200 px-3 sm:px-4 py-2.5">
+              <p className="text-sm text-gray-600 whitespace-nowrap">
                 <span className="font-semibold text-gray-800">{data?.total ?? 0}</span> produtos encontrados
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <SlidersHorizontal size={16} className="text-gray-500" />
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as ListProductsParams["sortBy"])}
-                  className="text-sm border border-gray-200 rounded px-2 py-1 outline-none focus:border-[#1B5E20]"
+                  className="text-sm border border-gray-200 rounded px-2 py-1 outline-none focus:border-[#1B5E20] max-w-36 sm:max-w-none"
                 >
                   {sortOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>

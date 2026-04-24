@@ -185,8 +185,8 @@ export default function CartPage() {
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Carrinho de Compras</h1>
 
         {isEmpty ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
-            <ShoppingBag size={64} className="mx-auto text-gray-300 mb-4" />
+          <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-16 text-center">
+            <ShoppingBag size={56} className="mx-auto text-gray-300 mb-4" />
             <h2 className="text-xl font-bold text-gray-700 mb-2">Seu carrinho está vazio</h2>
             <p className="text-gray-500 mb-6">Adicione produtos para continuar comprando</p>
             <Link href="/products" className="inline-flex items-center gap-2 bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-bold px-8 py-3 rounded-md transition-colors">
