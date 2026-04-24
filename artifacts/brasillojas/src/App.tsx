@@ -197,7 +197,7 @@ function ProfileCompletionGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
   const [location, setLocation] = useLocation();
   const { data: profile, isLoading } = useGetUserProfile({
-    query: { enabled: !!isSignedIn && isLoaded, retry: false },
+    query: { enabled: !!isSignedIn && isLoaded, retry: false } as any,
   });
 
   const isExempt = PROFILE_EXEMPT_PATHS.some((p) => location.startsWith(p));

@@ -50,7 +50,7 @@ function PaymentStatusBadge({ status }: { status: string }) {
 export default function OrderConfirmationPage() {
   const { id } = useParams<{ id: string }>();
   const orderId = parseInt(id ?? "0");
-  const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } });
+  const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } as any });
 
   if (isLoading) {
     return (

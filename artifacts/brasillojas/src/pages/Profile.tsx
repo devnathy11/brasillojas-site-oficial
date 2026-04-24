@@ -7,7 +7,7 @@ import { CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
-  const { data: profile, isLoading } = useGetUserProfile({ query: { retry: false } });
+  const { data: profile, isLoading } = useGetUserProfile({ query: { retry: false } as any });
   const updateProfile = useUpdateUserProfile();
 
   const [form, setForm] = useState({

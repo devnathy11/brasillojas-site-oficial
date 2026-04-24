@@ -89,7 +89,7 @@ function OrderTracker({ status }: { status: string }) {
 export default function ReceiptPage() {
   const params = useParams<{ id: string }>();
   const orderId = Number(params.id);
-  const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } });
+  const { data: order, isLoading } = useGetOrder(orderId, { query: { enabled: !!orderId } as any });
   const { user } = useUser();
   const customerName = user?.fullName ?? user?.firstName ?? null;
   const queryClient = useQueryClient();
@@ -107,6 +107,7 @@ export default function ReceiptPage() {
       const t = setTimeout(() => window.print(), 700);
       return () => clearTimeout(t);
     }
+    return;
   }, [order, isLoading, orderId]);
 
   function handleConfirmDelivery() {
@@ -234,7 +235,7 @@ export default function ReceiptPage() {
           <div className="mb-4 space-y-1 text-xs">
             <div className="flex justify-between"><span>Protocolo:</span><span className="font-bold">{protocolo}</span></div>
             <div className="flex justify-between"><span>Data:</span><span>{date.toLocaleString("pt-BR")}</span></div>
-            <div className="flex justify-between"><span>Pagamento:</span><span className="font-bold">{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</span></div>
+            <div className="flex justify-between"><span>Pagamento:</span><span className="font-bold">{PAYMENT_LABELS[order.paymentMethod as keyof typeof PAYMENT_LABELS] ?? order.paymentMethod}</span></div>
             {order.couponCode && <div className="flex justify-between"><span>Cupom:</span><span>{order.couponCode}</span></div>}
           </div>
 

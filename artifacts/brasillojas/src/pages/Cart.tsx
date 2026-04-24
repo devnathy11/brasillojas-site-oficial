@@ -50,8 +50,8 @@ export default function CartPage() {
   const [, setLocation] = useLocation();
   const { getToken } = useAuth();
 
-  const { data: cart, isLoading } = useGetCart({ query: { retry: false } });
-  const { data: profile } = useGetUserProfile({ query: { retry: false } });
+  const { data: cart, isLoading } = useGetCart({ query: { retry: false } as any });
+  const { data: profile } = useGetUserProfile({ query: { retry: false } as any });
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveFromCart();
   const createOrder = useCreateOrder();
@@ -59,7 +59,7 @@ export default function CartPage() {
   const queryClient = useQueryClient();
 
   const { data: couponData, refetch: validateCoupon } = useValidateCoupon(appliedCoupon, {
-    query: { enabled: !!appliedCoupon, retry: false },
+    query: { enabled: !!appliedCoupon, retry: false } as any,
   });
 
   function handleApplyCoupon() {

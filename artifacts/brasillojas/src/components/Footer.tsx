@@ -36,7 +36,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Logo size={42} />
-              <span className="font-bold text-lg">BRASILLOJAS</span>
+              <span className="font-bold text-lg" translate="no">BRASILLOJAS</span>
             </div>
             <p className="text-sm text-green-100">
               Sua loja online favorita com as melhores marcas e preços.
@@ -45,7 +45,7 @@ export function Footer() {
         </div>
         <hr className="border-green-700 mt-10 mb-6" />
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-green-300">
-          <p>&copy; 2026 BrasilLojas. Todos os direitos reservados.</p>
+          <p>&copy; 2026 <span translate="no">BrasilLojas</span>. Todos os direitos reservados.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-white transition-colors">Privacidade</a>
             <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>

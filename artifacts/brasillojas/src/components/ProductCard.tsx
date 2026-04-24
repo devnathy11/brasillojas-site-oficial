@@ -44,7 +44,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
 
   const hasDiscount = product.originalPrice && product.originalPrice > product.price;
   const discountPercent = hasDiscount
-    ? Math.round((1 - product.price / product.originalPrice) * 100)
+    ? Math.round((1 - product.price / product.originalPrice!) * 100)
     : 0;
 
   return (

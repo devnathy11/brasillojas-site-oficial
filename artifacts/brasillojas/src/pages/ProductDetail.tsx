@@ -55,8 +55,8 @@ export default function ProductDetailPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
-  const { data: product, isLoading } = useGetProduct(productId, { query: { enabled: !!productId } });
-  const { data: reviews } = useListProductReviews(productId, { query: { enabled: !!productId } });
+  const { data: product, isLoading } = useGetProduct(productId, { query: { enabled: !!productId } as any });
+  const { data: reviews } = useListProductReviews(productId, { query: { enabled: !!productId } as any });
   const addToCart = useAddToCart();
   const createReview = useCreateReview();
   const { user } = useUser();

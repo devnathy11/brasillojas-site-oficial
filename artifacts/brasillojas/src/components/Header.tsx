@@ -21,7 +21,7 @@ export function Header() {
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
-  const { data: cart } = useGetCart({ query: { retry: false } });
+  const { data: cart } = useGetCart({ query: { retry: false } as any });
   const searchRef = useRef<HTMLDivElement>(null);
 
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
@@ -29,7 +29,7 @@ export function Header() {
   // Fetch suggestions when query is at least 2 characters
   const { data: suggestionsData } = useListProducts(
     { search: searchQuery.trim(), limit: 6 },
-    { query: { enabled: searchQuery.trim().length >= 2, retry: false } }
+    { query: { enabled: searchQuery.trim().length >= 2, retry: false } as any }
   );
   const suggestions = suggestionsData?.products ?? [];
 
@@ -67,7 +67,7 @@ export function Header() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
               <Logo size={42} />
-              <span className="font-bold text-lg tracking-wide hidden sm:block">BRASILLOJAS</span>
+              <span className="font-bold text-lg tracking-wide hidden sm:block" translate="no">BRASILLOJAS</span>
             </Link>
 
             {/* Search with suggestions */}
