@@ -188,8 +188,8 @@ export default function OrdersPage() {
                       <PaymentStatusBadge status={order.paymentStatus} />
                     </div>
                   </div>
-                  <Link href={`/receipt/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
-                    {order.status === "saiu_para_entrega" ? "Confirmar entrega" : "Ver comprovante"} <ChevronRight size={14} />
+                  <Link href={`/orders/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
+                    {order.status === "saiu_para_entrega" ? "Confirmar entrega" : "Ver detalhes"} <ChevronRight size={14} />
                   </Link>
                 </div>
               </motion.div>
