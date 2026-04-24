@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, CreditCard, QrCode, FileText, Wallet, Truck, Store, AlertCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useCreateOrder, useGetUserProfile } from "@workspace/api-client-react";
+import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useCreateOrder, useGetUserProfile, useUpdateUserProfile } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import type { UserProfile } from "@workspace/api-client-react";
 import { Show, useAuth } from "@clerk/react";
@@ -55,6 +55,7 @@ export default function CartPage() {
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveFromCart();
   const createOrder = useCreateOrder();
+  const updateProfile = useUpdateUserProfile();
   const queryClient = useQueryClient();
 
   const { data: couponData, refetch: validateCoupon } = useValidateCoupon(appliedCoupon, {
@@ -129,8 +130,19 @@ export default function CartPage() {
       {
         onSuccess: (order) => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-          sessionStorage.setItem("bl_autoprint_order", String(order.id));
-          setLocation(`/receipt/${order.id}`);
+          // If Móveis items were purchased, save the shipping address to the customer profile
+          if (moveiItems.length > 0 && address.street) {
+            updateProfile.mutate({
+              data: {
+                name: profile?.name ?? "",
+                email: profile?.email ?? "",
+                recoveryEmail: profile?.recoveryEmail ?? "",
+                phone: profile?.phone ?? "",
+                address: shippingAddr ?? address,
+              },
+            });
+          }
+          setLocation(`/order-confirmation/${order.id}`);
         },
       }
     );

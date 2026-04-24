@@ -30,6 +30,7 @@ import OrdersPage from "@/pages/Orders";
 import ProfilePage from "@/pages/Profile";
 import ReceiptPage from "@/pages/Receipt";
 import PaymentSuccessPage from "@/pages/PaymentSuccess";
+import OrderConfirmationPage from "@/pages/OrderConfirmation";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -244,6 +245,9 @@ function Router() {
       </Route>
       <Route path="/payment-success">
         <ProtectedRoute component={PaymentSuccessPage} />
+      </Route>
+      <Route path="/order-confirmation/:id">
+        <ProtectedRoute component={OrderConfirmationPage} />
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={ProfilePage} />

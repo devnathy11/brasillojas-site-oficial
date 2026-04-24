@@ -8,12 +8,13 @@ import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 
 import bannerOfertas from "@/assets/cat-ofertas.png";
-import bannerNovidades from "@/assets/cat-novidades.png";
-import bannerModa from "@/assets/banner-moda.png";
+import bannerNovidades from "@/assets/banner-eletro.png";
+import bannerModa from "@/assets/banner-sala.png";
 import catMoveis from "@/assets/cat-moveis.png";
 import catNovidades from "@/assets/cat-novidades.png";
 import catOfertas from "@/assets/cat-ofertas.png";
 import catEletronicos from "@/assets/cat-eletronicos.png";
+import catEletrodomesticos from "@/assets/cat-eletrodomesticos.png";
 
 const banners = [
   {
@@ -34,17 +35,17 @@ const banners = [
   },
   {
     id: 3,
-    title: "NOVIDADES",
-    subtitle: "RECÉM CHEGADAS",
+    title: "ELETRODOMÉSTICOS",
+    subtitle: "TECNOLOGIA NA SUA COZINHA",
     cta: "EXPLORAR",
-    href: "/products?category=novidades",
+    href: "/products?category=eletrodomesticos",
     image: bannerNovidades,
   },
 ];
 
 const categoryGrid = [
   { name: "Móveis", slug: "moveis", description: "Sofás, camas e mais", image: catMoveis },
-  { name: "Eletrodomésticos", slug: "eletrodomesticos", description: "Geladeiras, lavadoras e mais", image: catEletronicos },
+  { name: "Eletrodomésticos", slug: "eletrodomesticos", description: "Geladeiras, lavadoras e mais", image: catEletrodomesticos },
   { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets", image: catEletronicos },
   { name: "Novidades", slug: "novidades", description: "Chegou agora", image: catNovidades },
   { name: "Ofertas", slug: "ofertas", description: "10% off em produtos selecionados", image: catOfertas },

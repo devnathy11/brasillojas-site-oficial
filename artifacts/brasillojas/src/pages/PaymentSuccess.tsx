@@ -49,10 +49,9 @@ export default function PaymentSuccessPage() {
         const data = await res.json();
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         // Trigger auto-print on the receipt page
-        sessionStorage.setItem("bl_autoprint_order", String(data.orderId));
         setStatus("success");
         setMessage("Pagamento confirmado! Redirecionando...");
-        setTimeout(() => setLocation(`/receipt/${data.orderId}`), 1000);
+        setTimeout(() => setLocation(`/order-confirmation/${data.orderId}`), 1000);
       })
       .catch((err) => {
         console.error(err);

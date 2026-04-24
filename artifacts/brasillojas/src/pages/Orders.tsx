@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Package, ChevronRight } from "lucide-react";
+import { Package, ChevronRight, CheckCircle2, Clock } from "lucide-react";
 import { useListOrders } from "@workspace/api-client-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -23,6 +23,21 @@ const statusColor: Record<string, string> = {
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
 };
+
+function PaymentStatusBadge({ status }: { status?: string | null }) {
+  if (status === "paid") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+        <CheckCircle2 size={11} /> Pagamento Concluído
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+      <Clock size={11} /> Aguardando Pagamento
+    </span>
+  );
+}
 
 export default function OrdersPage() {
   const { data: orders, isLoading } = useListOrders();
@@ -87,9 +102,12 @@ export default function OrdersPage() {
                   <div>
                     <p className="text-sm text-gray-600">{order.items.length} {order.items.length === 1 ? "item" : "itens"}</p>
                     <p className="font-bold text-[#1B5E20]">{formatBRL(order.total)}</p>
+                    <div className="mt-1">
+                      <PaymentStatusBadge status={order.paymentStatus} />
+                    </div>
                   </div>
-                  <Link href={`/receipt/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
-                    Ver comprovante <ChevronRight size={14} />
+                  <Link href={`/order-confirmation/${order.id}`} className="flex items-center gap-1 text-[#1B5E20] text-sm font-medium hover:underline">
+                    Ver pedido <ChevronRight size={14} />
                   </Link>
                 </div>
               </motion.div>

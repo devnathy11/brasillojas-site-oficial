@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ShoppingCart, Star, ChevronLeft, ChevronRight, Heart, Share2, Minus, Plus } from "lucide-react";
+import { ShoppingCart, Star, ChevronLeft, ChevronRight, Heart, Share2, Minus, Plus, Zap } from "lucide-react";
 import { useGetProduct, useListProductReviews, useAddToCart, useCreateReview } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import { useUser, Show } from "@clerk/react";
@@ -61,6 +61,7 @@ export default function ProductDetailPage() {
   const createReview = useCreateReview();
   const { user } = useUser();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -104,6 +105,18 @@ export default function ProductDetailPage() {
   const avgRating = reviews?.length
     ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
     : product.rating;
+
+  function handleBuyNow() {
+    addToCart.mutate(
+      { data: { productId: product!.id, quantity: qty } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+          setLocation("/cart");
+        },
+      }
+    );
+  }
 
   function handleAddToCart() {
     addToCart.mutate(
@@ -268,10 +281,13 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            <button className="w-full py-3 border-2 border-[#C62828] text-[#C62828] hover:bg-[#C62828] hover:text-white font-bold rounded-md flex items-center justify-center gap-2 transition-colors mb-4">
-              <Link href="/cart" className="flex items-center gap-2 w-full justify-center">
-                Comprar Agora
-              </Link>
+            <button
+              onClick={handleBuyNow}
+              disabled={addToCart.isPending || product.stock === 0}
+              className="w-full py-3 border-2 border-[#C62828] text-[#C62828] hover:bg-[#C62828] hover:text-white font-bold rounded-md flex items-center justify-center gap-2 transition-colors mb-4 disabled:opacity-60"
+            >
+              <Zap size={18} />
+              Comprar Agora
             </button>
 
             {/* Description */}

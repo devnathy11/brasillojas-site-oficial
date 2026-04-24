@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useUser, Show, useClerk } from "@clerk/react";
 import { ShoppingCart, Search, User, Menu, X, ChevronDown, LogOut, Package, UserCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGetCart } from "@workspace/api-client-react";
+import { useGetCart, useListProducts } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 
@@ -19,18 +19,45 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [, setLocation] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
   const { data: cart } = useGetCart({ query: { retry: false } });
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
+
+  // Fetch suggestions when query is at least 2 characters
+  const { data: suggestionsData } = useListProducts(
+    { search: searchQuery.trim(), limit: 6 },
+    { query: { enabled: searchQuery.trim().length >= 2, retry: false } }
+  );
+  const suggestions = suggestionsData?.products ?? [];
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setShowSuggestions(false);
       setLocation(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
     }
+  }
+
+  function handleSuggestionClick(productId: number) {
+    setShowSuggestions(false);
+    setSearchQuery("");
+    setLocation(`/products/${productId}`);
   }
 
   return (
@@ -45,24 +72,77 @@ export function Header() {
               <span className="font-bold text-lg tracking-wide hidden sm:block">BRASILLOJAS</span>
             </Link>
 
-            {/* Search */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
-              <div className="flex">
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar produtos..."
-                  className="flex-1 px-4 py-2 text-gray-900 text-sm rounded-l-md outline-none border-0"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#F57F17] hover:bg-[#E65100] text-white rounded-r-md transition-colors"
-                >
-                  <Search size={18} />
-                </button>
-              </div>
-            </form>
+            {/* Search with suggestions */}
+            <div ref={searchRef} className="flex-1 max-w-2xl relative">
+              <form onSubmit={handleSearch}>
+                <div className="flex">
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowSuggestions(e.target.value.trim().length >= 2);
+                    }}
+                    onFocus={() => {
+                      if (searchQuery.trim().length >= 2) setShowSuggestions(true);
+                    }}
+                    placeholder="Buscar produtos..."
+                    className="flex-1 px-4 py-2 text-gray-900 text-sm rounded-l-md outline-none border-0"
+                    autoComplete="off"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#F57F17] hover:bg-[#E65100] text-white rounded-r-md transition-colors"
+                  >
+                    <Search size={18} />
+                  </button>
+                </div>
+              </form>
+
+              {/* Suggestions dropdown */}
+              <AnimatePresence>
+                {showSuggestions && suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-xl border border-gray-200 z-50 overflow-hidden"
+                  >
+                    {suggestions.map((product) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => handleSuggestionClick(product.id)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-8 h-8 object-cover rounded border border-gray-100 flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-800 line-clamp-1">{product.name}</p>
+                          <p className="text-xs text-[#C62828] font-semibold">
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSuggestions(false);
+                        setLocation(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-sm text-[#1B5E20] font-medium transition-colors border-t border-gray-100"
+                    >
+                      <Search size={14} /> Ver todos os resultados para "{searchQuery}"
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Actions */}
             <div className="flex items-center gap-3 ml-auto">
