@@ -9,9 +9,9 @@ import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 
 export default function ProductsPage() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
-  function getParams() {
+  function readUrlParams() {
     const p = new URLSearchParams(window.location.search);
     return {
       category: p.get("category") ?? undefined,
@@ -19,13 +19,13 @@ export default function ProductsPage() {
     };
   }
 
-  const [urlParams, setUrlParams] = useState(getParams);
+  const [urlParams, setUrlParams] = useState(readUrlParams);
   const [sortBy, setSortBy] = useState<ListProductsParams["sortBy"]>("newest");
   const [page, setPage] = useState(1);
 
-  // Re-read URL params whenever the location changes
+  // Re-sync from URL whenever location changes (header clicks, back/forward)
   useEffect(() => {
-    const next = getParams();
+    const next = readUrlParams();
     setUrlParams((prev) => {
       if (prev.category !== next.category || prev.search !== next.search) {
         setPage(1);
@@ -34,6 +34,13 @@ export default function ProductsPage() {
       return prev;
     });
   }, [location, window.location.search]);
+
+  // Navigate to a category — updates the URL so back/forward work
+  function navigateToCategory(slug: string | undefined) {
+    const params = new URLSearchParams();
+    if (slug) params.set("category", slug);
+    setLocation(`/products${params.size ? `?${params.toString()}` : ""}`);
+  }
 
   const queryParams: ListProductsParams = {
     sortBy,
@@ -86,7 +93,7 @@ export default function ProductsPage() {
                 <h4 className="text-sm font-semibold text-gray-600 mb-2">Categorias</h4>
                 <div className="space-y-1">
                   <button
-                    onClick={() => { setUrlParams({ category: undefined, search: urlParams.search }); setPage(1); }}
+                    onClick={() => navigateToCategory(undefined)}
                     className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
                       !urlParams.category ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
                     }`}
@@ -96,7 +103,7 @@ export default function ProductsPage() {
                   {(categories ?? []).map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => { setUrlParams({ category: cat.slug, search: undefined }); setPage(1); }}
+                      onClick={() => navigateToCategory(cat.slug)}
                       className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
                         urlParams.category === cat.slug ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
                       }`}
