@@ -165,6 +165,10 @@ async function seed() {
       .set({ name })
       .where(eq(categoriesTable.slug, slug));
   }
+  // Also fix any row with literal name "S" that was not caught by slug matching
+  await db.update(categoriesTable)
+    .set({ name: "Eletrônicos" })
+    .where(eq(categoriesTable.name, "S"));
 
   // Step 2: Upsert canonical categories — insert any that are missing by slug
   const existingCats = await db.query.categoriesTable.findMany();

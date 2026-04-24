@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "wouter";
 import { motion } from "framer-motion";
 import { Filter, SlidersHorizontal } from "lucide-react";
 import { useListProducts, useListCategories } from "@workspace/api-client-react";
@@ -9,45 +9,40 @@ import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 
 export default function ProductsPage() {
-  const [location, setLocation] = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  function readUrlParams() {
-    const p = new URLSearchParams(window.location.search);
-    return {
-      category: p.get("category") ?? undefined,
-      search: p.get("search") ?? undefined,
-    };
-  }
+  // Derive filter state directly from URL each render — no useState needed
+  const category = searchParams.get("category") ?? undefined;
+  const search = searchParams.get("search") ?? undefined;
 
-  const [urlParams, setUrlParams] = useState(readUrlParams);
   const [sortBy, setSortBy] = useState<ListProductsParams["sortBy"]>("newest");
   const [page, setPage] = useState(1);
 
-  // Re-sync from URL whenever location changes (header clicks, back/forward)
+  // Reset pagination when category or search changes
+  const prevCategoryRef = useRef(category);
+  const prevSearchRef = useRef(search);
   useEffect(() => {
-    const next = readUrlParams();
-    setUrlParams((prev) => {
-      if (prev.category !== next.category || prev.search !== next.search) {
-        setPage(1);
-        return next;
-      }
-      return prev;
-    });
-  }, [location, window.location.search]);
+    if (prevCategoryRef.current !== category || prevSearchRef.current !== search) {
+      setPage(1);
+      prevCategoryRef.current = category;
+      prevSearchRef.current = search;
+    }
+  }, [category, search]);
 
-  // Navigate to a category — updates the URL so back/forward work
   function navigateToCategory(slug: string | undefined) {
-    const params = new URLSearchParams();
-    if (slug) params.set("category", slug);
-    setLocation(`/products${params.size ? `?${params.toString()}` : ""}`);
+    if (slug) {
+      setSearchParams({ category: slug });
+    } else {
+      setSearchParams({});
+    }
   }
 
   const queryParams: ListProductsParams = {
     sortBy,
     page,
     limit: 24,
-    ...(urlParams.category ? { category: urlParams.category } : {}),
-    ...(urlParams.search ? { search: urlParams.search } : {}),
+    ...(category ? { category } : {}),
+    ...(search ? { search } : {}),
   };
 
   const { data, isLoading } = useListProducts(queryParams);
@@ -74,10 +69,10 @@ export default function ProductsPage() {
           <a href="/" className="hover:text-[#1B5E20]">Home</a>
           <span className="mx-2">&rsaquo;</span>
           <span className="text-gray-800">Produtos</span>
-          {urlParams.search && (
+          {search && (
             <>
               <span className="mx-2">&rsaquo;</span>
-              <span className="text-gray-800">"{urlParams.search}"</span>
+              <span className="text-gray-800">"{search}"</span>
             </>
           )}
         </div>
@@ -95,7 +90,7 @@ export default function ProductsPage() {
                   <button
                     onClick={() => navigateToCategory(undefined)}
                     className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
-                      !urlParams.category ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
+                      !category ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     Todos
@@ -105,7 +100,7 @@ export default function ProductsPage() {
                       key={cat.id}
                       onClick={() => navigateToCategory(cat.slug)}
                       className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
-                        urlParams.category === cat.slug ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
+                        category === cat.slug ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
                       }`}
                     >
                       {cat.name}
