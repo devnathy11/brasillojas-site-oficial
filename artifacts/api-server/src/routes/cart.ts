@@ -128,6 +128,22 @@ router.delete("/cart/items/:productId", async (req, res) => {
   }
 });
 
+// DELETE /api/cart/:productId — alias used by generated API client
+router.delete("/cart/:productId", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    if (isNaN(productId)) return res.status(400).json({ error: "Invalid product ID" });
+    await db.delete(cartItemsTable)
+      .where(and(eq(cartItemsTable.userId, userId), eq(cartItemsTable.productId, productId)));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // DELETE /api/cart
 router.delete("/cart", async (req, res) => {
   const userId = requireAuth(req, res);

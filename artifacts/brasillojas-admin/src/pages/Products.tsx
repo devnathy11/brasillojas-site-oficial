@@ -30,6 +30,7 @@ export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
+  const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
 
   const { data, isLoading } = useListProducts({ search: search || undefined });
   const { data: categories } = useListCategories();
@@ -85,16 +86,51 @@ export default function ProductsPage() {
     deleteProduct.mutate({ id }, { onSuccess: () => queryClient.invalidateQueries() });
   }
 
+  function toggleSelectProduct(id: number) {
+    setSelectedProducts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllProducts() {
+    if (products.every((p) => selectedProducts.has(p.id))) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(products.map((p) => p.id)));
+    }
+  }
+
+  function handleBulkDelete() {
+    if (!confirm(`Tem certeza que deseja excluir ${selectedProducts.size} produto(s)?`)) return;
+    selectedProducts.forEach((id) => {
+      deleteProduct.mutate({ id }, { onSuccess: () => queryClient.invalidateQueries() });
+    });
+    setSelectedProducts(new Set());
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Produtos</h1>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1B5E20] hover:bg-[#2E7D32] text-white text-sm font-semibold rounded-lg transition-colors"
-        >
-          <Plus size={16} /> Novo Produto
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedProducts.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <Trash2 size={16} /> Excluir selecionados ({selectedProducts.size})
+            </button>
+          )}
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1B5E20] hover:bg-[#2E7D32] text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            <Plus size={16} /> Novo Produto
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -122,6 +158,14 @@ export default function ProductsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="px-4 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={products.length > 0 && products.every((p) => selectedProducts.has(p.id))}
+                      onChange={toggleSelectAllProducts}
+                      className="w-4 h-4 accent-[#1B5E20] cursor-pointer"
+                    />
+                  </th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Produto</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Categoria</th>
                   <th className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">Preco</th>
@@ -132,7 +176,15 @@ export default function ProductsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={product.id} className={`hover:bg-gray-50 transition-colors ${selectedProducts.has(product.id) ? "bg-green-50" : ""}`}>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.has(product.id)}
+                        onChange={() => toggleSelectProduct(product.id)}
+                        className="w-4 h-4 accent-[#1B5E20] cursor-pointer"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded object-cover border border-gray-100 flex-shrink-0" />

@@ -47,6 +47,7 @@ export default function CartPage() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeError, setStripeError] = useState("");
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [, setLocation] = useLocation();
   const { getToken } = useAuth();
 
@@ -85,6 +86,39 @@ export default function CartPage() {
 
   function handleRemove(productId: number) {
     removeItem.mutate({ productId }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }) });
+  }
+
+  function toggleSelectItem(productId: number) {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  }
+
+  function toggleSelectGroup(productIds: number[]) {
+    setSelectedItems((prev) => {
+      const allSelected = productIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      productIds.forEach((id) => (allSelected ? next.delete(id) : next.add(id)));
+      return next;
+    });
+  }
+
+  function toggleSelectAll(allIds: number[]) {
+    setSelectedItems((prev) => {
+      if (allIds.every((id) => prev.has(id))) return new Set();
+      return new Set(allIds);
+    });
+  }
+
+  function handleRemoveSelected() {
+    selectedItems.forEach((productId) => {
+      removeItem.mutate({ productId });
+    });
+    setSelectedItems(new Set());
+    setTimeout(() => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }), 300);
   }
 
   async function handlePlaceOrder(e: React.FormEvent) {
@@ -196,51 +230,122 @@ export default function CartPage() {
         ) : (
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-3">
-              <AnimatePresence>
-                {items.map((item) => {
-                  const isMovel = item.categorySlug === "moveis";
-                  return (
-                    <motion.div key={item.productId} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="bg-white rounded-lg border border-gray-200 p-4 flex gap-4">
-                      <Link href={`/products/${item.productId}`} className="flex-shrink-0">
-                        <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover rounded-md border border-gray-100" />
-                      </Link>
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/products/${item.productId}`}>
-                          <h3 className="text-sm font-semibold text-gray-800 hover:text-[#1B5E20] line-clamp-2">{item.name}</h3>
-                        </Link>
-                        <p className="text-lg font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
-                        <div className="flex items-center gap-3 mt-2">
-                          <div className="flex items-center border border-gray-300 rounded overflow-hidden">
-                            <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100"><Minus size={14} /></button>
-                            <span className="w-10 text-center text-sm font-semibold">{item.quantity}</span>
-                            <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={14} /></button>
-                          </div>
-                          <button onClick={() => handleRemove(item.productId)} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={16} /></button>
-                          <p className="ml-auto font-bold text-gray-800">{formatBRL(item.price * item.quantity)}</p>
-                        </div>
-                        <div className="mt-2">
-                          {isMovel ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-0.5">
-                              <Truck size={11} /> Entrega disponível
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
-                              <Store size={11} /> Retirada na Loja
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+              {/* Select all bar */}
+              {items.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 px-4 py-2.5 flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium select-none">
+                    <input
+                      type="checkbox"
+                      checked={items.every((i) => selectedItems.has(i.productId))}
+                      onChange={() => toggleSelectAll(items.map((i) => i.productId))}
+                      className="w-4 h-4 accent-[#1B5E20] cursor-pointer"
+                    />
+                    Selecionar Todos ({items.length})
+                  </label>
+                  {selectedItems.size > 0 && (
+                    <button
+                      onClick={handleRemoveSelected}
+                      className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-800 font-semibold border border-red-200 rounded px-3 py-1.5 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={13} /> Excluir selecionados ({selectedItems.size})
+                    </button>
+                  )}
+                </div>
+              )}
 
-              {hasNonMoveis && (
-                <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs">
-                  <Store size={16} className="flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">Retirada na Loja</p>
-                    <p>Os itens marcados acima devem ser retirados em nossa loja física. Somente produtos da categoria Móveis têm entrega disponível.</p>
+              {/* Delivery section (Móveis) */}
+              {moveiItems.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-green-50 border-b border-green-100">
+                    <input
+                      type="checkbox"
+                      checked={moveiItems.every((i) => selectedItems.has(i.productId))}
+                      onChange={() => toggleSelectGroup(moveiItems.map((i) => i.productId))}
+                      className="w-4 h-4 accent-[#1B5E20] cursor-pointer"
+                    />
+                    <Truck size={15} className="text-green-700" />
+                    <span className="text-sm font-semibold text-green-800">BrasilLojas — Entrega</span>
+                  </div>
+                  <AnimatePresence>
+                    {moveiItems.map((item) => (
+                      <motion.div key={item.productId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 flex gap-3 border-b border-gray-100 last:border-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(item.productId)}
+                          onChange={() => toggleSelectItem(item.productId)}
+                          className="w-4 h-4 accent-[#1B5E20] cursor-pointer flex-shrink-0 mt-1"
+                        />
+                        <Link href={`/products/${item.productId}`} className="flex-shrink-0">
+                          <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded border border-gray-100" />
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/products/${item.productId}`}>
+                            <h3 className="text-sm font-semibold text-gray-800 hover:text-[#1B5E20] line-clamp-2">{item.name}</h3>
+                          </Link>
+                          <p className="text-base font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center border border-gray-300 rounded overflow-hidden">
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100"><Minus size={13} /></button>
+                              <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={13} /></button>
+                            </div>
+                            <button onClick={() => handleRemove(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs"><Trash2 size={14} /></button>
+                            <p className="ml-auto font-bold text-gray-800 text-sm">{formatBRL(item.price * item.quantity)}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* Pickup section (non-Móveis) */}
+              {nonMoveiItems.length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border-b border-amber-100">
+                    <input
+                      type="checkbox"
+                      checked={nonMoveiItems.every((i) => selectedItems.has(i.productId))}
+                      onChange={() => toggleSelectGroup(nonMoveiItems.map((i) => i.productId))}
+                      className="w-4 h-4 accent-[#1B5E20] cursor-pointer"
+                    />
+                    <Store size={15} className="text-amber-700" />
+                    <span className="text-sm font-semibold text-amber-800">BrasilLojas — Retirada na Loja</span>
+                  </div>
+                  <AnimatePresence>
+                    {nonMoveiItems.map((item) => (
+                      <motion.div key={item.productId} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-4 flex gap-3 border-b border-gray-100 last:border-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(item.productId)}
+                          onChange={() => toggleSelectItem(item.productId)}
+                          className="w-4 h-4 accent-[#1B5E20] cursor-pointer flex-shrink-0 mt-1"
+                        />
+                        <Link href={`/products/${item.productId}`} className="flex-shrink-0">
+                          <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded border border-gray-100" />
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/products/${item.productId}`}>
+                            <h3 className="text-sm font-semibold text-gray-800 hover:text-[#1B5E20] line-clamp-2">{item.name}</h3>
+                          </Link>
+                          <p className="text-base font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center border border-gray-300 rounded overflow-hidden">
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100"><Minus size={13} /></button>
+                              <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={13} /></button>
+                            </div>
+                            <button onClick={() => handleRemove(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs"><Trash2 size={14} /></button>
+                            <p className="ml-auto font-bold text-gray-800 text-sm">{formatBRL(item.price * item.quantity)}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  <div className="px-4 py-2.5 bg-amber-50 border-t border-amber-100">
+                    <p className="text-xs text-amber-800">
+                      <span className="font-semibold">Retirada na Loja:</span> Av. Getúlio Vargas, 1010 A — Centro, Pinheiro-MA · (98) 3381-4556
+                    </p>
                   </div>
                 </div>
               )}

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
-import { Printer, CheckCircle2, ArrowLeft, QrCode, Truck, PackageCheck, ShoppingBag, Package } from "lucide-react";
+import { Printer, CheckCircle2, ArrowLeft, QrCode, Truck, PackageCheck, ShoppingBag, Package, Copy, Check } from "lucide-react";
 import { useGetOrder, useConfirmDelivery } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { Header } from "@/components/Header";
 import logo from "@/assets/logo.jpg";
 import { formatBRL } from "@/lib/utils";
+import QRCode from "qrcode";
 
 const PAYMENT_LABELS: Record<string, string> = {
   pix: "PIX",
@@ -86,6 +87,30 @@ function OrderTracker({ status }: { status: string }) {
   );
 }
 
+const STORE = {
+  name: "BRASILLOJAS COMÉRCIO LTDA",
+  cnpj: "05.279.846/0001-26",
+  address: "Av. Getúlio Vargas, 1010 A — Centro",
+  city: "Pinheiro-MA",
+  cep: "CEP: 65.200-000",
+  phone: "(98) 3381-4556",
+  site: "www.brasillojas.com.br",
+  hours: "Seg–Sex: 8h às 18h | Sáb: 8h às 12h",
+};
+
+function CopyBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className="no-print inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 bg-[#1B5E20] text-white rounded"
+    >
+      {copied ? <Check size={10} /> : <Copy size={10} />}
+      {copied ? "Copiado!" : "Copiar"}
+    </button>
+  );
+}
+
 export default function ReceiptPage() {
   const params = useParams<{ id: string }>();
   const orderId = Number(params.id);
@@ -96,6 +121,7 @@ export default function ReceiptPage() {
 
   const [confirmed, setConfirmed] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [pixQrUrl, setPixQrUrl] = useState<string>("");
   const { mutate: doConfirmDelivery, isPending: isConfirming } = useConfirmDelivery();
 
   useEffect(() => {
@@ -109,6 +135,12 @@ export default function ReceiptPage() {
     }
     return;
   }, [order, isLoading, orderId]);
+
+  useEffect(() => {
+    if (!order || order.paymentMethod !== "pix" || order.paymentStatus === "paid") return;
+    const code = `00020126580014BR.GOV.BCB.PIX0130moveis@grupobrasillojas.com0217Pedido ${order.id}5204000053039865406${order.total.toFixed(2)}5802BR5910BRASILLOJAS6007PINHEIR62070503***6304CAFE`;
+    QRCode.toDataURL(code, { width: 200, margin: 1 }).then(setPixQrUrl).catch(() => {});
+  }, [order]);
 
   function handleConfirmDelivery() {
     setConfirmError(null);
@@ -139,8 +171,8 @@ export default function ReceiptPage() {
   const date = new Date(order.createdAt);
   const protocolo = `BL-${String(order.id).padStart(8, "0")}`;
   const paid = order.paymentStatus === "paid";
-  const fakePixCode = `00020126580014BR.GOV.BCB.PIX0136brasillojas-${order.id}-${Date.now().toString(36)}5204000053039865802BR5910BRASILLOJAS6009SAO PAULO62070503***6304ABCD`;
-  const fakeBoleto = `34191.79001 01043.510047 91020.150008 1 ${String(Date.now()).slice(-14)}`;
+  const pixCode = `00020126580014BR.GOV.BCB.PIX0130moveis@grupobrasillojas.com0217Pedido ${order.id}5204000053039865406${order.total.toFixed(2)}5802BR5910BRASILLOJAS6007PINHEIR62070503***6304CAFE`;
+  const fakeBoleto = `34191.79001 01043.510047 91020.${String(order.id).padStart(6, "0")} 1 ${String(Date.now()).slice(-14)}`;
   const isDeliveryPending = order.status === "saiu_para_entrega" && !confirmed;
   const isDelivered = order.status === "entregue" || confirmed;
 
@@ -211,10 +243,12 @@ export default function ReceiptPage() {
           {/* Header */}
           <div className="text-center border-b-2 border-dashed border-gray-300 pb-4 mb-4">
             <img src={logo} alt="BrasilLojas" className="h-14 mx-auto mb-2 object-contain" />
-            <h1 className="font-bold text-base">BRASILLOJAS COMÉRCIO LTDA</h1>
-            <p className="text-xs text-gray-600">CNPJ: 12.345.678/0001-90</p>
-            <p className="text-xs text-gray-600">Av. Paulista, 1000 - São Paulo/SP</p>
-            <p className="text-xs text-gray-600">www.brasillojas.com.br</p>
+            <h1 className="font-bold text-base">{STORE.name}</h1>
+            <p className="text-xs text-gray-600">CNPJ: {STORE.cnpj}</p>
+            <p className="text-xs text-gray-600">{STORE.address}</p>
+            <p className="text-xs text-gray-600">{STORE.city} · {STORE.cep}</p>
+            <p className="text-xs text-gray-600">Tel: {STORE.phone}</p>
+            <p className="text-xs text-gray-600">{STORE.site}</p>
           </div>
 
           {/* Status */}
@@ -273,26 +307,53 @@ export default function ReceiptPage() {
             <p>{order.shippingAddress.city}/{order.shippingAddress.state} - {order.shippingAddress.zipCode}</p>
           </div>
 
+          {/* Loja info */}
+          <div className="border-t-2 border-dashed border-gray-300 pt-3 mt-3 text-xs">
+            <p className="font-bold mb-1">LOJA FÍSICA / RETIRADA</p>
+            <p>{STORE.address}</p>
+            <p>{STORE.city} · {STORE.cep}</p>
+            <p>Tel: {STORE.phone}</p>
+            <p>Horário: {STORE.hours}</p>
+            <p className="mt-1 text-gray-600">CNPJ: {STORE.cnpj}</p>
+          </div>
+
           {/* Payment-specific block */}
           {order.paymentMethod === "pix" && order.paymentStatus !== "paid" && (
             <div className="border-t-2 border-dashed border-gray-300 pt-3 mt-3 text-xs">
-              <p className="font-bold mb-2 flex items-center gap-1"><QrCode size={14} /> CÓDIGO PIX COPIA E COLA</p>
-              <div className="bg-gray-50 border border-gray-300 p-2 break-all text-[10px] font-mono">{fakePixCode}</div>
-              <p className="mt-2 text-center">Vencimento: 30 minutos</p>
+              <p className="font-bold mb-2 flex items-center gap-1"><QrCode size={14} /> PAGAMENTO VIA PIX</p>
+              {pixQrUrl && (
+                <div className="flex justify-center my-3">
+                  <img src={pixQrUrl} alt="QR Code PIX" className="w-36 h-36 border border-gray-300" />
+                </div>
+              )}
+              <p className="font-semibold mb-1">PIX Copia e Cola:</p>
+              <div className="bg-gray-50 border border-gray-300 p-2 break-all text-[10px] font-mono">{pixCode}</div>
+              <div className="flex justify-center mt-2"><CopyBtn text={pixCode} /></div>
+              <p className="mt-2 text-center text-gray-500">Vencimento: 30 minutos após o pedido</p>
             </div>
           )}
           {order.paymentMethod === "boleto" && (
             <div className="border-t-2 border-dashed border-gray-300 pt-3 mt-3 text-xs">
-              <p className="font-bold mb-2">LINHA DIGITÁVEL</p>
+              <p className="font-bold mb-2">BOLETO BANCÁRIO</p>
+              <div className="flex justify-center py-2">
+                <svg viewBox="0 0 200 60" className="w-full max-w-xs h-12">
+                  {Array.from({ length: 60 }).map((_, i) => (
+                    <rect key={i} x={i * 3.2 + 4} y={0} width={i % 3 === 0 ? 3 : i % 5 === 0 ? 1 : 2} height={60} fill="black" />
+                  ))}
+                </svg>
+              </div>
+              <p className="font-semibold mb-1">Linha Digitável:</p>
               <div className="bg-gray-50 border border-gray-300 p-2 break-all text-[11px] font-mono text-center tracking-wider">{fakeBoleto}</div>
-              <p className="mt-2 text-center">Vencimento: 3 dias úteis</p>
+              <div className="flex justify-center mt-2"><CopyBtn text={fakeBoleto} /></div>
+              <p className="mt-2 text-center text-gray-500">Vencimento: 3 dias úteis · Pague em qualquer banco ou lotérica</p>
             </div>
           )}
 
           {/* Footer */}
           <div className="border-t-2 border-dashed border-gray-300 pt-3 mt-4 text-center text-xs text-gray-600">
             <p className="font-bold">OBRIGADO PELA SUA COMPRA!</p>
-            <p>Acompanhe seu pedido em www.brasillojas.com.br/orders</p>
+            <p>Acompanhe seu pedido em {STORE.site}/orders</p>
+            <p className="mt-1">{STORE.name} · CNPJ: {STORE.cnpj}</p>
             <p className="mt-2">**** FIM DO COMPROVANTE ****</p>
           </div>
         </div>

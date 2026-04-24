@@ -17,6 +17,7 @@ export default function ProductsPage() {
 
   const [sortBy, setSortBy] = useState<ListProductsParams["sortBy"]>("newest");
   const [page, setPage] = useState(1);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
 
   // Reset pagination when category or search changes
   const prevCategoryRef = useRef(category);
@@ -48,7 +49,9 @@ export default function ProductsPage() {
   const { data, isLoading } = useListProducts(queryParams);
   const { data: categories } = useListCategories();
 
-  const products = data?.products ?? [];
+  const allProducts = data?.products ?? [];
+  const brands = Array.from(new Set(allProducts.map((p) => p.brand).filter(Boolean))) as string[];
+  const products = selectedBrand ? allProducts.filter((p) => p.brand === selectedBrand) : allProducts;
   const totalPages = data?.totalPages ?? 1;
 
   const sortOptions: { label: string; value: ListProductsParams["sortBy"] }[] = [
@@ -109,6 +112,33 @@ export default function ProductsPage() {
                   ))}
                 </div>
               </div>
+
+              {brands.length > 0 && (
+                <div className="mb-2">
+                  <h4 className="text-sm font-semibold text-gray-600 mb-2">Marcas</h4>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setSelectedBrand(null)}
+                      className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
+                        !selectedBrand ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      Todas as marcas
+                    </button>
+                    {brands.map((brand) => (
+                      <button
+                        key={brand}
+                        onClick={() => setSelectedBrand(brand === selectedBrand ? null : brand)}
+                        className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
+                          selectedBrand === brand ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </aside>
 
