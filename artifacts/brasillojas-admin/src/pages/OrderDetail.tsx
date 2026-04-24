@@ -10,10 +10,14 @@ import {
   ChevronRight,
   Printer,
 } from "lucide-react";
-import { useGetAdminOrder, useUpdateOrderStatus } from "@workspace/api-client-react";
+import {
+  useGetAdminOrder,
+  useUpdateOrderStatus,
+  getAdminOrderQueryKey,
+} from "@workspace/api-client-react";
+import type { Order, OrderItem, Address } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBRL, formatDate } from "@/lib/utils";
-import { getAdminOrderQueryKey } from "@workspace/api-client-react";
 
 const statusLabel: Record<string, string> = {
   pending: "Aguardando",
@@ -70,18 +74,17 @@ function escHtml(str: string | null | undefined): string {
     .replace(/'/g, "&#39;");
 }
 
-function buildReceiptHtml(order: ReturnType<typeof useGetAdminOrder>["data"]): string {
-  if (!order) return "";
+function buildReceiptHtml(order: Order): string {
   const now = new Date().toLocaleString("pt-BR");
-  const addr = order.shippingAddress as any;
+  const addr = order.shippingAddress;
   const addressStr = addr
     ? `${escHtml(addr.street)}, ${escHtml(addr.number)}${addr.complement ? " " + escHtml(addr.complement) : ""}<br/>${escHtml(addr.neighborhood)} – ${escHtml(addr.city)}/${escHtml(addr.state)}<br/>CEP: ${escHtml(addr.zipCode)}`
     : "Retirada na Loja";
-  const itemsRows = (order.items as any[]).map((it) =>
+  const itemsRows = order.items.map((it: OrderItem) =>
     `<tr><td>${escHtml(it.name)}</td><td style="text-align:center">${it.quantity}</td><td style="text-align:right">${formatBRL(it.price)}</td><td style="text-align:right">${formatBRL(it.price * it.quantity)}</td></tr>`
   ).join("");
   const paymentStatus = order.paymentStatus === "paid" ? "PAGO" : "AGUARDANDO PAGAMENTO";
-  const customer = (order as any).customerName ?? order.userId;
+  const customer = order.customerName ?? order.userId;
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -231,10 +234,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const addr = order.shippingAddress as any;
-  const items = order.items as any[];
-  const customerName = (order as any).customerName as string | null;
-  const customerEmail = (order as any).customerEmail as string | null;
+  const addr: Address | null = order.shippingAddress ?? null;
 
   return (
     <motion.div
@@ -302,10 +302,10 @@ export default function OrderDetailPage() {
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
               <Package size={16} className="text-[#1B5E20]" />
               <h2 className="font-semibold text-gray-800">Itens do Pedido</h2>
-              <span className="ml-auto text-xs text-gray-400">{items.length} {items.length === 1 ? "item" : "itens"}</span>
+              <span className="ml-auto text-xs text-gray-400">{order.items.length} {order.items.length === 1 ? "item" : "itens"}</span>
             </div>
             <div className="divide-y divide-gray-50">
-              {items.map((item, i) => (
+              {order.items.map((item: OrderItem, i: number) => (
                 <div key={i} className="flex items-center gap-4 px-5 py-4">
                   {item.imageUrl ? (
                     <img
@@ -336,13 +336,15 @@ export default function OrderDetailPage() {
               <h2 className="font-semibold text-gray-800">Cliente</h2>
             </div>
             <div className="px-5 py-4 space-y-2 text-sm">
-              <p className="font-medium text-gray-800">{customerName ?? "—"}</p>
-              {customerEmail && <p className="text-gray-500">{customerEmail}</p>}
+              <p className="font-medium text-gray-800">{order.customerName ?? "—"}</p>
+              {order.customerEmail && (
+                <p className="text-gray-500">{order.customerEmail}</p>
+              )}
               <p className="text-gray-400 text-xs break-all">{order.userId}</p>
             </div>
           </div>
 
-          {addr && (
+          {addr ? (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
                 <MapPin size={16} className="text-[#1B5E20]" />
@@ -355,9 +357,7 @@ export default function OrderDetailPage() {
                 <p className="text-gray-400">CEP: {addr.zipCode}</p>
               </div>
             </div>
-          )}
-
-          {!addr && (
+          ) : (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
                 <MapPin size={16} className="text-[#1B5E20]" />
