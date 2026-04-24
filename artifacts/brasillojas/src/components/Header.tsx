@@ -8,8 +8,6 @@ import { Logo } from "@/components/Logo";
 
 const categories = [
   { name: "Móveis", slug: "moveis" },
-  { name: "Roupas & Confecções", slug: "roupas" },
-  { name: "Calçados", slug: "calcados" },
   { name: "Eletrônicos", slug: "eletronicos" },
   { name: "Novidades", slug: "novidades" },
   { name: "Ofertas", slug: "ofertas" },
