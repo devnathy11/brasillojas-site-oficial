@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Filter, SlidersHorizontal } from "lucide-react";
@@ -10,20 +10,37 @@ import { ProductCard } from "@/components/ProductCard";
 
 export default function ProductsPage() {
   const [location] = useLocation();
-  const params = new URLSearchParams(window.location.search);
-  const initialCategory = params.get("category") ?? undefined;
-  const initialSearch = params.get("search") ?? undefined;
 
+  function getParams() {
+    const p = new URLSearchParams(window.location.search);
+    return {
+      category: p.get("category") ?? undefined,
+      search: p.get("search") ?? undefined,
+    };
+  }
+
+  const [urlParams, setUrlParams] = useState(getParams);
   const [sortBy, setSortBy] = useState<ListProductsParams["sortBy"]>("newest");
-  const [category, setCategory] = useState<string | undefined>(initialCategory);
   const [page, setPage] = useState(1);
+
+  // Re-read URL params whenever the location changes
+  useEffect(() => {
+    const next = getParams();
+    setUrlParams((prev) => {
+      if (prev.category !== next.category || prev.search !== next.search) {
+        setPage(1);
+        return next;
+      }
+      return prev;
+    });
+  }, [location, window.location.search]);
 
   const queryParams: ListProductsParams = {
     sortBy,
     page,
     limit: 24,
-    ...(category ? { category } : {}),
-    ...(initialSearch ? { search: initialSearch } : {}),
+    ...(urlParams.category ? { category: urlParams.category } : {}),
+    ...(urlParams.search ? { search: urlParams.search } : {}),
   };
 
   const { data, isLoading } = useListProducts(queryParams);
@@ -50,10 +67,10 @@ export default function ProductsPage() {
           <a href="/" className="hover:text-[#1B5E20]">Home</a>
           <span className="mx-2">&rsaquo;</span>
           <span className="text-gray-800">Produtos</span>
-          {initialSearch && (
+          {urlParams.search && (
             <>
               <span className="mx-2">&rsaquo;</span>
-              <span className="text-gray-800">"{initialSearch}"</span>
+              <span className="text-gray-800">"{urlParams.search}"</span>
             </>
           )}
         </div>
@@ -69,9 +86,9 @@ export default function ProductsPage() {
                 <h4 className="text-sm font-semibold text-gray-600 mb-2">Categorias</h4>
                 <div className="space-y-1">
                   <button
-                    onClick={() => setCategory(undefined)}
+                    onClick={() => { setUrlParams({ category: undefined, search: urlParams.search }); setPage(1); }}
                     className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
-                      !category ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
+                      !urlParams.category ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     Todos
@@ -79,9 +96,9 @@ export default function ProductsPage() {
                   {(categories ?? []).map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => { setCategory(cat.slug); setPage(1); }}
+                      onClick={() => { setUrlParams({ category: cat.slug, search: undefined }); setPage(1); }}
                       className={`w-full text-left text-sm py-1.5 px-2 rounded transition-colors ${
-                        category === cat.slug ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
+                        urlParams.category === cat.slug ? "bg-[#E8F5E9] text-[#1B5E20] font-semibold" : "text-gray-600 hover:bg-gray-50"
                       }`}
                     >
                       {cat.name}

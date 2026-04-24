@@ -2,19 +2,20 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useGetFeaturedProducts, useListCategories } from "@workspace/api-client-react";
+import { useGetFeaturedProducts } from "@workspace/api-client-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 
 import bannerOfertas from "@/assets/cat-ofertas.png";
-import bannerNovidades from "@/assets/banner-eletro.png";
-import bannerModa from "@/assets/banner-sala.png";
+import bannerEletro from "@/assets/banner-eletro.png";
+import bannerSala from "@/assets/banner-sala.png";
 import catMoveis from "@/assets/cat-moveis.png";
+import catRoupas from "@/assets/cat-roupas.png";
+import catCalcados from "@/assets/cat-calcados.png";
+import catEletronicos from "@/assets/cat-eletronicos.png";
 import catNovidades from "@/assets/cat-novidades.png";
 import catOfertas from "@/assets/cat-ofertas.png";
-import catEletronicos from "@/assets/cat-eletronicos.png";
-import catEletrodomesticos from "@/assets/cat-eletrodomesticos.png";
 
 const banners = [
   {
@@ -23,7 +24,7 @@ const banners = [
     subtitle: "SEU ESTILO. SUA CASA.",
     cta: "COMPRE AGORA",
     href: "/products?category=moveis",
-    image: bannerModa,
+    image: bannerSala,
   },
   {
     id: 2,
@@ -35,17 +36,18 @@ const banners = [
   },
   {
     id: 3,
-    title: "ELETRODOMÉSTICOS",
-    subtitle: "TECNOLOGIA NA SUA COZINHA",
+    title: "ELETRÔNICOS",
+    subtitle: "TECNOLOGIA EM SUAS MÃOS",
     cta: "EXPLORAR",
-    href: "/products?category=eletrodomesticos",
-    image: bannerNovidades,
+    href: "/products?category=eletronicos",
+    image: bannerEletro,
   },
 ];
 
 const categoryGrid = [
   { name: "Móveis", slug: "moveis", description: "Sofás, camas e mais", image: catMoveis },
-  { name: "Eletrodomésticos", slug: "eletrodomesticos", description: "Geladeiras, lavadoras e mais", image: catEletrodomesticos },
+  { name: "Roupas & Confecções", slug: "roupas", description: "Moda feminina e masculina", image: catRoupas },
+  { name: "Calçados", slug: "calcados", description: "Tênis, sandálias e mais", image: catCalcados },
   { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets", image: catEletronicos },
   { name: "Novidades", slug: "novidades", description: "Chegou agora", image: catNovidades },
   { name: "Ofertas", slug: "ofertas", description: "10% off em produtos selecionados", image: catOfertas },
@@ -155,7 +157,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-gray-800 mb-5 uppercase tracking-wide">
               Compre por Categoria
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {categoryGrid.map((cat, i) => (
                 <motion.div
                   key={cat.slug}
@@ -173,7 +175,7 @@ export default function HomePage() {
                         />
                       </div>
                       <div className="p-3 text-center">
-                        <p className="text-sm font-semibold text-gray-800">{cat.name}</p>
+                        <p className="text-sm font-semibold text-gray-800 leading-tight">{cat.name}</p>
                         <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{cat.description}</p>
                       </div>
                     </div>

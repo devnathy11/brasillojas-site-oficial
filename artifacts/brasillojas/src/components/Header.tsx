@@ -4,12 +4,12 @@ import { useUser, Show, useClerk } from "@clerk/react";
 import { ShoppingCart, Search, User, Menu, X, ChevronDown, LogOut, Package, UserCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetCart, useListProducts } from "@workspace/api-client-react";
-import { cn } from "@/lib/utils";
 import { Logo } from "@/components/Logo";
 
 const categories = [
   { name: "Móveis", slug: "moveis" },
-  { name: "Eletrodomésticos", slug: "eletrodomesticos" },
+  { name: "Roupas & Confecções", slug: "roupas" },
+  { name: "Calçados", slug: "calcados" },
   { name: "Eletrônicos", slug: "eletronicos" },
   { name: "Novidades", slug: "novidades" },
   { name: "Ofertas", slug: "ofertas" },
