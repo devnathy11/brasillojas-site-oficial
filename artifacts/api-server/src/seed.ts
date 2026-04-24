@@ -4,7 +4,8 @@ import { sql, inArray } from "drizzle-orm";
 
 const categories = [
   { name: "Móveis", slug: "moveis", imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400" },
-  { name: "Eletrodomésticos", slug: "eletrodomesticos", imageUrl: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=400" },
+  { name: "Roupas & Confecções", slug: "roupas", imageUrl: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400" },
+  { name: "Calçados", slug: "calcados", imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400" },
   { name: "Novidades", slug: "novidades", imageUrl: "https://images.unsplash.com/photo-1586495777744-4e6232bf7946?w=400" },
   { name: "Ofertas", slug: "ofertas", imageUrl: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400" },
   { name: "Eletrônicos", slug: "eletronicos", imageUrl: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400" },
@@ -46,39 +47,70 @@ const products = [
     specifications: { Material: "Eucalipto", Lugares: "6", Dimensões: "180x90cm" },
   },
   {
-    name: "Geladeira Frost Free 450L",
-    description: "Geladeira frost free com capacidade de 450 litros, painel digital e dispenser de água.",
-    price: "3299.90",
-    originalPrice: "3999.90",
-    imageUrl: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=600",
-    categorySlug: "eletrodomesticos",
-    stock: 12,
-    brand: "EltroBR",
+    name: "Vestido Floral Midi Verão",
+    description: "Vestido midi com estampa floral, tecido leve e respirável. Perfeito para o verão.",
+    price: "149.90",
+    originalPrice: "199.90",
+    imageUrl: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600",
+    categorySlug: "roupas",
+    stock: 40,
+    brand: "ModaBR",
     isFeatured: true,
-    specifications: { Capacidade: "450L", "Tipo": "Frost Free", "Voltagem": "Bivolt", "Cor": "Inox" },
+    specifications: { Tecido: "Viscose", Estampa: "Floral", Comprimento: "Midi" },
   },
   {
-    name: "Máquina de Lavar 12kg Digital",
-    description: "Máquina de lavar roupas com 12kg de capacidade, painel digital e 16 programas de lavagem.",
-    price: "2199.00",
-    originalPrice: "2799.00",
-    imageUrl: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600",
-    categorySlug: "eletrodomesticos",
-    stock: 8,
-    brand: "EltroBR",
-    isFeatured: true,
-    specifications: { Capacidade: "12kg", Programas: "16", "Tipo": "Carga Frontal", "Voltagem": "220V" },
+    name: "Camiseta Premium Algodão Pima",
+    description: "Camiseta básica em algodão pima peruano de alta qualidade, conforto e durabilidade.",
+    price: "89.90",
+    imageUrl: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=600",
+    categorySlug: "roupas",
+    stock: 80,
+    brand: "ModaBR",
+    specifications: { Tecido: "Algodão Pima 100%", Caimento: "Regular Fit" },
   },
   {
-    name: "Micro-ondas 30L com Grill",
-    description: "Micro-ondas com capacidade de 30 litros, função grill e 10 níveis de potência.",
-    price: "699.90",
-    originalPrice: "899.90",
-    imageUrl: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600",
-    categorySlug: "eletrodomesticos",
+    name: "Jeans Skinny Feminino",
+    description: "Calça jeans skinny feminina com lycra para maior conforto e mobilidade.",
+    price: "179.90",
+    originalPrice: "229.90",
+    imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600",
+    categorySlug: "roupas",
+    stock: 55,
+    brand: "ModaBR",
+    specifications: { Composição: "97% algodão, 3% lycra", Cintura: "Alta", Comprimento: "Full length" },
+  },
+  {
+    name: "Tênis Running Performance",
+    description: "Tênis de corrida com amortecimento responsivo, solado de borracha e cabedal respirável.",
+    price: "349.90",
+    originalPrice: "449.90",
+    imageUrl: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600",
+    categorySlug: "calcados",
+    stock: 30,
+    brand: "SportBR",
+    isFeatured: true,
+    specifications: { Solado: "Borracha EVA", Cabedal: "Mesh respirável", Drop: "8mm" },
+  },
+  {
+    name: "Sandália Salto Fino Couro",
+    description: "Sandália feminina de salto fino em couro legítimo, sofisticada e confortável.",
+    price: "259.90",
+    imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600",
+    categorySlug: "calcados",
     stock: 25,
-    brand: "EltroBR",
-    specifications: { Capacidade: "30L", "Função Grill": "Sim", "Potência": "1400W", "Voltagem": "127V" },
+    brand: "EleganceBR",
+    specifications: { Material: "Couro legítimo", Salto: "8cm", Fecho: "Fivela" },
+  },
+  {
+    name: "Tênis Casual Couro Masculino",
+    description: "Tênis casual masculino em couro com solado de borracha antiderrapante.",
+    price: "299.90",
+    originalPrice: "379.90",
+    imageUrl: "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=600",
+    categorySlug: "calcados",
+    stock: 20,
+    brand: "SportBR",
+    specifications: { Material: "Couro", Solado: "Borracha antiderrapante", Palmilha: "Anatômica" },
   },
   {
     name: "Smartphone 5G 256GB",
@@ -123,27 +155,10 @@ const coupons = [
   { code: "BLACK50", discountType: "percentage", discountValue: "50", maxUses: 50, expiresAt: new Date("2026-12-31") },
 ];
 
-const DEPRECATED_CATEGORY_SLUGS = ["roupas", "calcados"];
-
-async function removeDeprecatedCategories() {
-  const deprecated = await db.query.categoriesTable.findMany({
-    where: (t) => inArray(t.slug, DEPRECATED_CATEGORY_SLUGS),
-  });
-  if (deprecated.length === 0) return;
-
-  const ids = deprecated.map((c) => c.id);
-  await db.delete(productsTable).where(inArray(productsTable.categoryId, ids));
-  await db.delete(categoriesTable).where(inArray(categoriesTable.id, ids));
-  console.log(`Removed deprecated categories: ${deprecated.map((c) => c.slug).join(", ")}`);
-}
-
 async function seed() {
   console.log("Seeding database...");
 
-  // Step 1: Remove deprecated categories (and their products) from any existing DB
-  await removeDeprecatedCategories();
-
-  // Step 2: Upsert canonical categories — insert any that are missing by slug
+  // Upsert canonical categories — insert any that are missing by slug
   const existingCats = await db.query.categoriesTable.findMany();
   const existingSlugs = new Set(existingCats.map((c) => c.slug));
   const missingCats = categories.filter(({ slug }) => !existingSlugs.has(slug));
@@ -160,7 +175,7 @@ async function seed() {
     console.log("All canonical categories already present, skipping category insert.");
   }
 
-  // Step 3: Only insert products if the table is empty (fresh install)
+  // Only insert products if the table is empty (fresh install)
   const existingProducts = await db.select({ count: sql<number>`count(*)::int` }).from(productsTable);
   if (existingProducts[0].count > 0) {
     console.log("Products already exist, skipping product seed.");
@@ -184,7 +199,7 @@ async function seed() {
     console.log(`Inserted ${insertedProducts.length} products`);
   }
 
-  // Step 4: Insert coupons only if table is empty
+  // Insert coupons only if table is empty
   const existingCoupons = await db.select({ count: sql<number>`count(*)::int` }).from(couponsTable);
   if (existingCoupons[0].count > 0) {
     console.log("Coupons already exist, skipping coupon seed.");
