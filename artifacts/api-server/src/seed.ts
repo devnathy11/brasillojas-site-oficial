@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { categoriesTable, productsTable, couponsTable } from "@workspace/db";
-import { sql, inArray } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 
 const categories = [
   { name: "Móveis", slug: "moveis", imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400" },
@@ -158,7 +158,15 @@ const coupons = [
 async function seed() {
   console.log("Seeding database...");
 
-  // Upsert canonical categories — insert any that are missing by slug
+  // Step 1: Normalize existing categories — ensure all known slugs have correct names
+  // This fixes any stale or incorrectly named categories (e.g. "S" → "Eletrônicos")
+  for (const { slug, name } of categories) {
+    await db.update(categoriesTable)
+      .set({ name })
+      .where(eq(categoriesTable.slug, slug));
+  }
+
+  // Step 2: Upsert canonical categories — insert any that are missing by slug
   const existingCats = await db.query.categoriesTable.findMany();
   const existingSlugs = new Set(existingCats.map((c) => c.slug));
   const missingCats = categories.filter(({ slug }) => !existingSlugs.has(slug));
