@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db } from "@workspace/db";
-import { ordersTable, cartItemsTable, productsTable, couponsTable, usersTable } from "@workspace/db";
+import { ordersTable, cartItemsTable, productsTable, categoriesTable, couponsTable, usersTable } from "@workspace/db";
 import { eq, desc, inArray } from "drizzle-orm";
+import { validateProfileComplete, validateDeliveryMethod } from "../lib/orderValidation";
 
 const router = Router();
 
@@ -224,10 +225,20 @@ router.post("/orders", async (req, res) => {
   try {
     const { shippingAddress, couponCode, paymentMethod = "pix" } = req.body;
 
+    // --- Profile completeness check ---
+    const profileError = await validateProfileComplete(userId);
+    if (profileError) return res.status(422).json({ error: profileError });
+
+    // --- Delivery method validation ---
+    const deliveryError = await validateDeliveryMethod(userId, shippingAddress);
+    if (deliveryError) return res.status(422).json({ error: deliveryError });
+
+    // --- Fetch cart ---
     const cartItems = await db
-      .select({ cartItem: cartItemsTable, product: productsTable })
+      .select({ cartItem: cartItemsTable, product: productsTable, category: categoriesTable })
       .from(cartItemsTable)
       .innerJoin(productsTable, eq(cartItemsTable.productId, productsTable.id))
+      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .where(eq(cartItemsTable.userId, userId));
 
     if (!cartItems.length) return res.status(400).json({ error: "Cart is empty" });
@@ -273,7 +284,7 @@ router.post("/orders", async (req, res) => {
       discount: discount.toFixed(2),
       total: total.toFixed(2),
       couponCode: couponCodeApplied ?? null,
-      shippingAddress,
+      shippingAddress: shippingAddress ?? null,
       paymentMethod: method,
       paymentStatus,
     }).returning();

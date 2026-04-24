@@ -92,9 +92,8 @@ export default function CartPage() {
     setStripeError("");
 
     const hasMoveisItems = moveiItems.length > 0;
-    const shippingAddr = hasMoveisItems
-      ? address
-      : profile?.address ?? address;
+    // Only include a shippingAddress when Móveis items are in the cart
+    const shippingAddr = hasMoveisItems ? address : undefined;
 
     if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
       setStripeLoading(true);

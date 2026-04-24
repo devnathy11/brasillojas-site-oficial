@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { cartItemsTable, productsTable, ordersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
+import { validateProfileComplete, validateDeliveryMethod } from "../lib/orderValidation";
 
 const router = Router();
 
@@ -26,6 +27,10 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
     const stripe = await getUncachableStripeClient();
     const base = getPublicBaseUrl();
 
+    // --- Profile completeness check ---
+    const profileError = await validateProfileComplete(userId);
+    if (profileError) return res.status(422).json({ error: profileError });
+
     // Get cart items with product info
     const cartItems = await db
       .select({ cartItem: cartItemsTable, product: productsTable })
@@ -38,9 +43,10 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
     }
 
     const { shippingAddress, couponCode } = req.body;
-    if (!shippingAddress) {
-      return res.status(400).json({ error: "Endereço de entrega obrigatório" });
-    }
+
+    // --- Delivery method validation ---
+    const deliveryError = await validateDeliveryMethod(userId, shippingAddress);
+    if (deliveryError) return res.status(422).json({ error: deliveryError });
 
     const lineItems = cartItems.map(({ cartItem, product }) => ({
       price_data: {
@@ -49,7 +55,7 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
           name: product.name,
           ...(product.imageUrl ? { images: [product.imageUrl] } : {}),
         },
-        unit_amount: Math.round(product.price * 100),
+        unit_amount: Math.round(Number(product.price) * 100),
       },
       quantity: cartItem.quantity,
     }));
@@ -63,7 +69,7 @@ router.post("/stripe/create-checkout-session", async (req, res) => {
       cancel_url: `${base}/cart`,
       metadata: {
         userId,
-        shippingAddress: JSON.stringify(shippingAddress),
+        shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : "",
         couponCode: couponCode ?? "",
       },
     });
@@ -94,6 +100,10 @@ router.post("/stripe/complete-order", async (req, res) => {
   if (!sessionId) return res.status(400).json({ error: "session_id required" });
 
   try {
+    // --- Profile completeness check (guard against drift between session creation and completion) ---
+    const profileError = await validateProfileComplete(userId);
+    if (profileError) return res.status(422).json({ error: profileError });
+
     const stripe = await getUncachableStripeClient();
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
@@ -106,7 +116,7 @@ router.post("/stripe/complete-order", async (req, res) => {
       return res.status(403).json({ error: "Sessão de outro utilizador" });
     }
 
-    const shippingAddress = JSON.parse(metadata.shippingAddress ?? "{}");
+    const shippingAddress = metadata.shippingAddress ? JSON.parse(metadata.shippingAddress) : null;
     const couponCode = metadata.couponCode || null;
 
     // Fetch cart (may still be there if not yet cleared)
@@ -130,7 +140,7 @@ router.post("/stripe/complete-order", async (req, res) => {
       quantity: cartItem.quantity,
     }));
 
-    const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const subtotal = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const stripeTotal = (session.amount_total ?? 0) / 100;
 
     const [order] = await db.insert(ordersTable).values({
@@ -141,7 +151,7 @@ router.post("/stripe/complete-order", async (req, res) => {
       discount: Math.max(0, subtotal - stripeTotal).toFixed(2),
       total: stripeTotal.toFixed(2),
       couponCode,
-      shippingAddress,
+      shippingAddress: shippingAddress ?? null,
       paymentMethod: "credit_card",
       paymentStatus: "paid",
     }).returning();

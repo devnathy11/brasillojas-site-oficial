@@ -34,7 +34,12 @@ export async function runMigrations() {
         ));
     `);
 
-    logger.info("DB migrations applied (barcode, recovery_email, orders.status default+constraint)");
+    // Allow shippingAddress to be null for store-pickup (non-Móveis) orders
+    await db.execute(sql`
+      ALTER TABLE orders ALTER COLUMN shipping_address DROP NOT NULL;
+    `);
+
+    logger.info("DB migrations applied (barcode, recovery_email, orders.status default+constraint, shipping_address nullable)");
   } catch (err) {
     logger.error({ err }, "Error applying DB migrations");
     throw err;
