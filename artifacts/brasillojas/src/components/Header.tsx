@@ -26,14 +26,12 @@ export function Header() {
 
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
 
-  // Fetch suggestions when query is at least 2 characters
   const { data: suggestionsData } = useListProducts(
     { search: searchQuery.trim(), limit: 6 },
     { query: { enabled: searchQuery.trim().length >= 2, retry: false } as any }
   );
   const suggestions = suggestionsData?.products ?? [];
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -62,15 +60,15 @@ export function Header() {
     <header className="sticky top-0 z-50 shadow-md">
       {/* Top bar */}
       <div className="bg-[#1B5E20] text-white">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Logo */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+
+          {/* === Desktop row (single row with logo + search + actions) === */}
+          <div className="hidden sm:flex items-center gap-4 py-3">
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
               <Logo size={38} />
-              <span className="font-bold text-lg tracking-wide hidden sm:block" translate="no">BRASILLOJAS</span>
+              <span className="font-bold text-lg tracking-wide" translate="no">BRASILLOJAS</span>
             </Link>
 
-            {/* Search with suggestions */}
             <div ref={searchRef} className="flex-1 min-w-0 max-w-2xl relative">
               <form onSubmit={handleSearch}>
                 <div className="flex">
@@ -81,23 +79,17 @@ export function Header() {
                       setSearchQuery(e.target.value);
                       setShowSuggestions(e.target.value.trim().length >= 2);
                     }}
-                    onFocus={() => {
-                      if (searchQuery.trim().length >= 2) setShowSuggestions(true);
-                    }}
+                    onFocus={() => { if (searchQuery.trim().length >= 2) setShowSuggestions(true); }}
                     placeholder="Buscar produtos..."
                     className="flex-1 px-4 py-2 text-gray-900 text-sm rounded-l-md outline-none border-0"
                     autoComplete="off"
                   />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#F57F17] hover:bg-[#E65100] text-white rounded-r-md transition-colors"
-                  >
+                  <button type="submit" className="px-4 py-2 bg-[#F57F17] hover:bg-[#E65100] text-white rounded-r-md transition-colors">
                     <Search size={18} />
                   </button>
                 </div>
               </form>
 
-              {/* Suggestions dropdown */}
               <AnimatePresence>
                 {showSuggestions && suggestions.length > 0 && (
                   <motion.div
@@ -114,11 +106,7 @@ export function Header() {
                         onClick={() => handleSuggestionClick(product.id)}
                         className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
                       >
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="w-8 h-8 object-cover rounded border border-gray-100 flex-shrink-0"
-                        />
+                        <img src={product.imageUrl} alt={product.name} className="w-8 h-8 object-cover rounded border border-gray-100 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-800 line-clamp-1">{product.name}</p>
                           <p className="text-xs text-[#C62828] font-semibold">
@@ -129,10 +117,7 @@ export function Header() {
                     ))}
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowSuggestions(false);
-                        setLocation(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-                      }}
+                      onClick={() => { setShowSuggestions(false); setLocation(`/products?search=${encodeURIComponent(searchQuery.trim())}`); }}
                       className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-sm text-[#1B5E20] font-medium transition-colors border-t border-gray-100"
                     >
                       <Search size={14} /> Ver todos os resultados para "{searchQuery}"
@@ -142,30 +127,22 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {/* Cart */}
-              <Link href="/cart" className="relative flex items-center gap-1 hover:opacity-80 transition-opacity">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Link href="/cart" className="relative flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                 <ShoppingCart size={22} />
                 {cartItemCount > 0 && (
                   <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#C62828] text-white text-xs flex items-center justify-center font-bold">
                     {cartItemCount > 9 ? "9+" : cartItemCount}
                   </span>
                 )}
-                <span className="hidden sm:block text-xs">Carrinho</span>
+                <span className="text-xs">Carrinho</span>
               </Link>
 
-              {/* User */}
               <Show when="signed-in">
                 <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-1 hover:opacity-80 transition-opacity"
-                  >
+                  <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
                     <UserCircle size={22} />
-                    <span className="hidden sm:block text-xs max-w-20 truncate">
-                      {user?.firstName ?? "Minha conta"}
-                    </span>
+                    <span className="text-xs max-w-20 truncate">{user?.firstName ?? "Minha conta"}</span>
                     <ChevronDown size={14} />
                   </button>
                   <AnimatePresence>
@@ -181,25 +158,14 @@ export function Header() {
                           <p className="font-semibold text-sm truncate">{user?.fullName ?? user?.firstName}</p>
                           <p className="text-xs text-gray-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
                         </div>
-                        <Link
-                          href="/profile"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50"
-                        >
+                        <Link href="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50">
                           <User size={16} /> Meu Perfil
                         </Link>
-                        <Link
-                          href="/orders"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50"
-                        >
+                        <Link href="/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50">
                           <Package size={16} /> Meus Pedidos
                         </Link>
                         <hr className="border-gray-100" />
-                        <button
-                          onClick={() => { setUserMenuOpen(false); signOut(); }}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-b-lg text-left"
-                        >
+                        <button onClick={() => { setUserMenuOpen(false); signOut(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-b-lg text-left">
                           <LogOut size={16} /> Sair
                         </button>
                       </motion.div>
@@ -208,25 +174,110 @@ export function Header() {
                 </div>
               </Show>
               <Show when="signed-out">
-                <Link href="/sign-in" className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                <Link href="/sign-in" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                   <User size={22} />
-                  <span className="hidden sm:block text-xs">Entrar</span>
+                  <span className="text-xs">Entrar</span>
+                </Link>
+              </Show>
+            </div>
+          </div>
+
+          {/* === Mobile: row 1 — logo + actions === */}
+          <div className="flex sm:hidden items-center justify-between py-2.5">
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+              <Logo size={34} />
+              <span className="font-bold text-base tracking-wide" translate="no">BRASILLOJAS</span>
+            </Link>
+
+            <div className="flex items-center gap-3">
+              <Link href="/cart" className="relative hover:opacity-80 transition-opacity">
+                <ShoppingCart size={24} />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#C62828] text-white text-[10px] flex items-center justify-center font-bold">
+                    {cartItemCount > 9 ? "9+" : cartItemCount}
+                  </span>
+                )}
+              </Link>
+
+              <Show when="signed-in">
+                <Link href="/profile" className="hover:opacity-80 transition-opacity">
+                  <UserCircle size={24} />
+                </Link>
+              </Show>
+              <Show when="signed-out">
+                <Link href="/sign-in" className="hover:opacity-80 transition-opacity">
+                  <User size={24} />
                 </Link>
               </Show>
 
-              {/* Mobile menu toggle */}
-              <button
-                className="sm:hidden"
-                onClick={() => setMobileOpen(!mobileOpen)}
-              >
-                {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+              <button onClick={() => setMobileOpen(!mobileOpen)} className="hover:opacity-80 transition-opacity">
+                {mobileOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
+          </div>
+
+          {/* === Mobile: row 2 — search bar === */}
+          <div ref={searchRef} className="sm:hidden pb-2.5 relative">
+            <form onSubmit={handleSearch}>
+              <div className="flex">
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(e.target.value.trim().length >= 2);
+                  }}
+                  onFocus={() => { if (searchQuery.trim().length >= 2) setShowSuggestions(true); }}
+                  placeholder="Buscar produtos..."
+                  className="flex-1 px-3 py-2 text-gray-900 text-sm rounded-l-md outline-none border-0"
+                  autoComplete="off"
+                />
+                <button type="submit" className="px-3 py-2 bg-[#F57F17] hover:bg-[#E65100] text-white rounded-r-md transition-colors">
+                  <Search size={16} />
+                </button>
+              </div>
+            </form>
+
+            <AnimatePresence>
+              {showSuggestions && suggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full left-0 right-0 mt-0.5 bg-white rounded-md shadow-xl border border-gray-200 z-50 overflow-hidden"
+                >
+                  {suggestions.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => handleSuggestionClick(product.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <img src={product.imageUrl} alt={product.name} className="w-8 h-8 object-cover rounded border border-gray-100 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 line-clamp-1">{product.name}</p>
+                        <p className="text-xs text-[#C62828] font-semibold">
+                          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => { setShowSuggestions(false); setLocation(`/products?search=${encodeURIComponent(searchQuery.trim())}`); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-sm text-[#1B5E20] font-medium transition-colors border-t border-gray-100"
+                  >
+                    <Search size={14} /> Ver todos os resultados para "{searchQuery}"
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Desktop navigation */}
       <nav className="bg-[#2E7D32] hidden sm:block">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-1">
@@ -263,6 +314,20 @@ export function Header() {
                   {cat.name}
                 </Link>
               ))}
+              <hr className="border-green-700 my-1" />
+              <Show when="signed-in">
+                <Link href="/orders" onClick={() => setMobileOpen(false)} className="px-3 py-2 text-white text-sm hover:bg-[#2E7D32] rounded flex items-center gap-2">
+                  <Package size={15} /> Meus Pedidos
+                </Link>
+                <Link href="/profile" onClick={() => setMobileOpen(false)} className="px-3 py-2 text-white text-sm hover:bg-[#2E7D32] rounded flex items-center gap-2">
+                  <User size={15} /> Meu Perfil
+                </Link>
+              </Show>
+              <Show when="signed-out">
+                <Link href="/sign-in" onClick={() => setMobileOpen(false)} className="px-3 py-2 text-white text-sm hover:bg-[#2E7D32] rounded flex items-center gap-2">
+                  <User size={15} /> Entrar / Cadastrar
+                </Link>
+              </Show>
             </div>
           </motion.div>
         )}

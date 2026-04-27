@@ -1,25 +1,15 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, CreditCard, QrCode, FileText, Wallet, Truck, Store, AlertCircle } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useCreateOrder, useGetUserProfile, useUpdateUserProfile } from "@workspace/api-client-react";
+import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, AlertCircle } from "lucide-react";
+import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useGetUserProfile } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import type { UserProfile } from "@workspace/api-client-react";
-import { Show, useAuth } from "@clerk/react";
+import { Show } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { formatBRL } from "@/lib/utils";
-
-type PaymentMethod = "pix" | "credit_card" | "debit_card" | "boleto";
-
-const PAYMENT_OPTIONS: Array<{ id: PaymentMethod; label: string; sub: string; icon: LucideIcon }> = [
-  { id: "pix", label: "PIX", sub: "Aprovação imediata · 5% de desconto", icon: QrCode },
-  { id: "credit_card", label: "Cartão de Crédito", sub: "Em até 12x sem juros", icon: CreditCard },
-  { id: "debit_card", label: "Cartão de Débito", sub: "Aprovação imediata", icon: Wallet },
-  { id: "boleto", label: "Boleto Bancário", sub: "Vence em 3 dias úteis", icon: FileText },
-];
 
 function isProfileComplete(profile: UserProfile | null | undefined): boolean {
   if (!profile) return false;
@@ -41,22 +31,12 @@ export default function CartPage() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [couponError, setCouponError] = useState("");
-  const [address, setAddress] = useState({ street: "", number: "", neighborhood: "", city: "", state: "", zipCode: "", complement: "" });
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
-  const [card, setCard] = useState({ number: "", name: "", exp: "", cvv: "", installments: 1 });
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [stripeLoading, setStripeLoading] = useState(false);
-  const [stripeError, setStripeError] = useState("");
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
-  const [, setLocation] = useLocation();
-  const { getToken } = useAuth();
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } as any });
   const { data: profile } = useGetUserProfile({ query: { retry: false } as any });
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveFromCart();
-  const createOrder = useCreateOrder();
-  const updateProfile = useUpdateUserProfile();
   const queryClient = useQueryClient();
 
   const { data: couponData, refetch: validateCoupon } = useValidateCoupon(appliedCoupon, {
@@ -121,66 +101,6 @@ export default function CartPage() {
     setTimeout(() => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }), 300);
   }
 
-  async function handlePlaceOrder(e: React.FormEvent) {
-    e.preventDefault();
-    setStripeError("");
-
-    const hasMoveisItems = moveiItems.length > 0;
-    // Only include a shippingAddress when Móveis items are in the cart
-    const shippingAddr = hasMoveisItems ? address : undefined;
-
-    if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
-      setStripeLoading(true);
-      try {
-        const token = await getToken();
-        const res = await fetch("/api/stripe/create-checkout-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            shippingAddress: shippingAddr,
-            couponCode: appliedCoupon || undefined,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setStripeError(data.error ?? "Erro ao iniciar pagamento.");
-          setStripeLoading(false);
-          return;
-        }
-        window.location.href = data.url;
-      } catch {
-        setStripeError("Erro de conexão ao iniciar pagamento.");
-        setStripeLoading(false);
-      }
-      return;
-    }
-
-    createOrder.mutate(
-      { data: { shippingAddress: shippingAddr, couponCode: appliedCoupon || undefined, paymentMethod } },
-      {
-        onSuccess: (order) => {
-          queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-          // If Móveis items were purchased, save the shipping address to the customer profile
-          if (moveiItems.length > 0 && address.street) {
-            updateProfile.mutate({
-              data: {
-                name: profile?.name ?? "",
-                email: profile?.email ?? "",
-                recoveryEmail: profile?.recoveryEmail ?? "",
-                phone: profile?.phone ?? "",
-                address: shippingAddr ?? address,
-              },
-            });
-          }
-          setLocation(`/order-confirmation/${order.id}`);
-        },
-      }
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -201,14 +121,8 @@ export default function CartPage() {
       ? subtotal * (Number(couponData.coupon.discountValue) / 100)
       : Number(couponData.coupon.discountValue)
     : 0;
-  const pixDiscount = paymentMethod === "pix" ? subtotal * 0.05 : 0;
-  const discount = Number(cart?.discount ?? 0) + couponDiscount + pixDiscount;
+  const discount = Number(cart?.discount ?? 0) + couponDiscount;
   const total = Math.max(0, subtotal - discount);
-
-  const moveiItems = items.filter((item) => item.categorySlug === "moveis");
-  const nonMoveiItems = items.filter((item) => item.categorySlug !== "moveis");
-  const allMoveis = items.length > 0 && nonMoveiItems.length === 0;
-  const hasNonMoveis = nonMoveiItems.length > 0;
   const profileComplete = isProfileComplete(profile);
 
   return (
@@ -371,13 +285,10 @@ export default function CartPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-medium">{formatBRL(subtotal)}</span></div>
                   {couponDiscount > 0 && (<div className="flex justify-between text-green-600"><span>Cupom</span><span>-{formatBRL(couponDiscount)}</span></div>)}
-                  {pixDiscount > 0 && (<div className="flex justify-between text-green-600"><span>Desconto PIX (5%)</span><span>-{formatBRL(pixDiscount)}</span></div>)}
                   <div className="flex justify-between text-gray-600"><span>Frete</span><span className="text-green-600 font-medium">Grátis</span></div>
                   <hr className="border-gray-200 my-2" />
-                  <div className="flex justify-between text-base font-bold text-gray-800"><span>Total</span><span className="text-[#C62828] text-lg">{formatBRL(total)}</span></div>
-                  {paymentMethod === "credit_card" && (
-                    <p className="text-xs text-gray-500">ou {card.installments}x de {formatBRL(total / card.installments)} sem juros</p>
-                  )}
+                  <div className="flex justify-between text-base font-bold text-gray-800"><span>Total estimado</span><span className="text-[#C62828] text-lg">{formatBRL(total)}</span></div>
+                  <p className="text-[11px] text-gray-400">Desconto PIX de 5% aplicado no checkout</p>
                 </div>
 
                 <Show when="signed-in">
@@ -392,9 +303,9 @@ export default function CartPage() {
                       </Link>
                     </div>
                   ) : (
-                    <button onClick={() => setShowCheckout(!showCheckout)} className="w-full mt-4 py-3 bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold rounded-md flex items-center justify-center gap-2">
+                    <Link href="/checkout" className="w-full mt-4 py-3 bg-[#C62828] hover:bg-[#B71C1C] text-white font-bold rounded-md flex items-center justify-center gap-2 block text-center">
                       Finalizar Compra <ArrowRight size={18} />
-                    </button>
+                    </Link>
                   )}
                 </Show>
                 <Show when="signed-out">
@@ -403,145 +314,6 @@ export default function CartPage() {
                   </Link>
                 </Show>
               </div>
-
-              <AnimatePresence>
-                {showCheckout && (
-                  <motion.form initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} onSubmit={handlePlaceOrder} className="bg-white rounded-lg border border-gray-200 p-4 space-y-5">
-
-                    {allMoveis && (
-                      <div>
-                        <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Endereço de Entrega</h3>
-                        <div className="space-y-3">
-                          {[
-                            { field: "zipCode", label: "CEP", placeholder: "00000-000" },
-                            { field: "street", label: "Rua", placeholder: "Nome da rua" },
-                            { field: "number", label: "Número", placeholder: "123" },
-                            { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)" },
-                            { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro" },
-                            { field: "city", label: "Cidade", placeholder: "Nome da cidade" },
-                            { field: "state", label: "Estado", placeholder: "SP" },
-                          ].map(({ field, label, placeholder }) => (
-                            <div key={field}>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                              <input value={address[field as keyof typeof address] ?? ""} onChange={(e) => setAddress({ ...address, [field]: e.target.value })} placeholder={placeholder} required={field !== "complement"} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {hasNonMoveis && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                        <p className="font-semibold flex items-center gap-1 mb-1"><Store size={13} /> Retirada na Loja</p>
-                        <p>
-                          {nonMoveiItems.map((i) => i.name).join(", ")} {nonMoveiItems.length === 1 ? "deve ser retirado" : "devem ser retirados"} em nossa loja física após a confirmação do pedido.
-                        </p>
-                      </div>
-                    )}
-
-                    {moveiItems.length > 0 && hasNonMoveis && (
-                      <div>
-                        <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Truck size={16} /> Endereço de Entrega (Móveis)</h3>
-                        <div className="space-y-3">
-                          {[
-                            { field: "zipCode", label: "CEP", placeholder: "00000-000" },
-                            { field: "street", label: "Rua", placeholder: "Nome da rua" },
-                            { field: "number", label: "Número", placeholder: "123" },
-                            { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)" },
-                            { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro" },
-                            { field: "city", label: "Cidade", placeholder: "Nome da cidade" },
-                            { field: "state", label: "Estado", placeholder: "SP" },
-                          ].map(({ field, label, placeholder }) => (
-                            <div key={field}>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                              <input value={address[field as keyof typeof address] ?? ""} onChange={(e) => setAddress({ ...address, [field]: e.target.value })} placeholder={placeholder} required={field !== "complement"} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <h3 className="font-bold text-gray-800 mb-3">Forma de Pagamento</h3>
-                      <div className="space-y-2">
-                        {PAYMENT_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          const selected = paymentMethod === opt.id;
-                          return (
-                            <button
-                              type="button"
-                              key={opt.id}
-                              onClick={() => setPaymentMethod(opt.id)}
-                              className={`w-full flex items-center gap-3 px-3 py-3 rounded border-2 text-left transition-colors ${selected ? "border-[#1B5E20] bg-green-50" : "border-gray-200 hover:border-gray-300"}`}
-                            >
-                              <Icon size={20} className={selected ? "text-[#1B5E20]" : "text-gray-500"} />
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-gray-800">{opt.label}</p>
-                                <p className="text-xs text-gray-500">{opt.sub}</p>
-                              </div>
-                              <div className={`w-4 h-4 rounded-full border-2 ${selected ? "border-[#1B5E20] bg-[#1B5E20]" : "border-gray-300"}`} />
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <AnimatePresence>
-                        {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mt-3 space-y-2 overflow-hidden">
-                            <input value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim().slice(0, 19) })} placeholder="Número do cartão" className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                            <input value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value.toUpperCase() })} placeholder="Nome impresso no cartão" className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value.replace(/\D/g, "").replace(/(\d{2})(\d)/, "$1/$2").slice(0, 5) })} placeholder="MM/AA" className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                              <input value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) })} placeholder="CVV" className="border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]" />
-                            </div>
-                            {paymentMethod === "credit_card" && (
-                              <select value={card.installments} onChange={(e) => setCard({ ...card, installments: Number(e.target.value) })} className="w-full border border-gray-300 rounded px-3 py-2 text-sm outline-none focus:border-[#1B5E20]">
-                                {[1, 2, 3, 6, 10, 12].map((n) => (
-                                  <option key={n} value={n}>{n}x de {formatBRL(total / n)} sem juros</option>
-                                ))}
-                              </select>
-                            )}
-                          </motion.div>
-                        )}
-                        {paymentMethod === "pix" && (
-                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 p-3 bg-green-50 border border-green-200 rounded text-xs text-green-800">
-                            Você receberá o QR Code PIX ao confirmar o pedido. Aprovação imediata após o pagamento.
-                          </motion.div>
-                        )}
-                        {paymentMethod === "boleto" && (
-                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                            O boleto será gerado após a confirmação. Vencimento em 3 dias úteis.
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {stripeError && (
-                      <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{stripeError}</p>
-                    )}
-                    <button
-                      type="submit"
-                      disabled={createOrder.isPending || stripeLoading}
-                      className="w-full py-3 bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-bold rounded-md transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
-                    >
-                      {(createOrder.isPending || stripeLoading) ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                          Processando pagamento...
-                        </>
-                      ) : (
-                        `Pagar ${formatBRL(total)}`
-                      )}
-                    </button>
-                    {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
-                      <p className="text-[11px] text-center text-gray-400">🔒 Pagamento processado com segurança pelo Stripe</p>
-                    )}
-                  </motion.form>
-                )}
-              </AnimatePresence>
             </div>
           </div>
         )}

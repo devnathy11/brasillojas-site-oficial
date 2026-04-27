@@ -30,6 +30,7 @@ import HomePage from "@/pages/Home";
 import ProductsPage from "@/pages/Products";
 import ProductDetailPage from "@/pages/ProductDetail";
 import CartPage from "@/pages/Cart";
+import CheckoutPage from "@/pages/Checkout";
 import OrdersPage from "@/pages/Orders";
 import OrderDetailPage from "@/pages/OrderDetail";
 import ProfilePage from "@/pages/Profile";
@@ -192,7 +193,7 @@ function isProfileComplete(profile: UserProfile | undefined): boolean {
   );
 }
 
-const PROFILE_EXEMPT_PATHS = ["/profile", "/sign-in", "/sign-up", "/suporte", "/orders", "/receipt"];
+const PROFILE_EXEMPT_PATHS = ["/profile", "/sign-in", "/sign-up", "/suporte", "/orders", "/receipt", "/checkout"];
 
 function ProfileCompletionGate({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
@@ -242,6 +243,9 @@ function Router() {
       <Route path="/products" component={ProductsPage} />
       <Route path="/products/:id" component={ProductDetailPage} />
       <Route path="/cart" component={CartPage} />
+      <Route path="/checkout">
+        <ProtectedRoute component={CheckoutPage} />
+      </Route>
       <Route path="/orders">
         <ProtectedRoute component={OrdersPage} />
       </Route>
