@@ -36,6 +36,8 @@ function mapOrder(order: typeof ordersTable.$inferSelect) {
     shippingAddress: order.shippingAddress,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
+    customerName: order.customerName ?? null,
+    customerEmail: order.customerEmail ?? null,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
   };
@@ -86,24 +88,34 @@ router.get("/orders/all", async (req, res) => {
   try {
     const orders = await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
 
-    const uniqueUserIds = [...new Set(orders.map((o) => o.userId))];
+    // For orders that don't yet have stored customer info (legacy), fall back to joining usersTable
+    const legacyOrderUserIds = [
+      ...new Set(
+        orders
+          .filter((o) => !o.customerName && !o.customerEmail)
+          .map((o) => o.userId)
+      ),
+    ];
     const profiles =
-      uniqueUserIds.length > 0
+      legacyOrderUserIds.length > 0
         ? await db
             .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
             .from(usersTable)
-            .where(inArray(usersTable.id, uniqueUserIds))
+            .where(inArray(usersTable.id, legacyOrderUserIds))
         : [];
-
     const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
     const result = orders.map((order) => {
-      const profile = profileMap.get(order.userId);
-      return {
-        ...mapOrder(order),
-        customerName: profile?.name ?? null,
-        customerEmail: profile?.email ?? null,
-      };
+      const mapped = mapOrder(order);
+      if (!mapped.customerName && !mapped.customerEmail) {
+        const profile = profileMap.get(order.userId);
+        return {
+          ...mapped,
+          customerName: profile?.name ?? null,
+          customerEmail: profile?.email ?? null,
+        };
+      }
+      return mapped;
     });
 
     res.json(result);
@@ -126,18 +138,23 @@ router.get("/orders/all/:id", async (req, res) => {
     const order = await db.query.ordersTable.findFirst({ where: eq(ordersTable.id, id) });
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    const profiles = await db
-      .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
-      .from(usersTable)
-      .where(eq(usersTable.id, order.userId));
+    const mapped = mapOrder(order);
 
-    const profile = profiles[0] ?? null;
+    // Fallback: if stored customer info is missing (legacy order), look up from usersTable
+    if (!mapped.customerName && !mapped.customerEmail) {
+      const profiles = await db
+        .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+        .from(usersTable)
+        .where(eq(usersTable.id, order.userId));
+      const profile = profiles[0] ?? null;
+      return res.json({
+        ...mapped,
+        customerName: profile?.name ?? null,
+        customerEmail: profile?.email ?? null,
+      });
+    }
 
-    res.json({
-      ...mapOrder(order),
-      customerName: profile?.name ?? null,
-      customerEmail: profile?.email ?? null,
-    });
+    res.json(mapped);
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }
@@ -276,6 +293,13 @@ router.post("/orders", async (req, res) => {
     const paymentStatus =
       method === "credit_card" || method === "debit_card" ? "paid" : "pending";
 
+    // Fetch customer info to store on the order
+    const userProfile = await db
+      .select({ name: usersTable.name, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .then((rows) => rows[0] ?? null);
+
     const [order] = await db.insert(ordersTable).values({
       userId,
       status: "criando",
@@ -287,6 +311,8 @@ router.post("/orders", async (req, res) => {
       shippingAddress: shippingAddress ?? null,
       paymentMethod: method,
       paymentStatus,
+      customerName: userProfile?.name ?? null,
+      customerEmail: userProfile?.email ?? null,
     }).returning();
 
     await db.delete(cartItemsTable).where(eq(cartItemsTable.userId, userId));

@@ -39,7 +39,15 @@ export async function runMigrations() {
       ALTER TABLE orders ALTER COLUMN shipping_address DROP NOT NULL;
     `);
 
-    logger.info("DB migrations applied (barcode, recovery_email, orders.status default+constraint, shipping_address nullable)");
+    // Store customer name and email at order creation time for admin visibility
+    await db.execute(sql`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name text;
+    `);
+    await db.execute(sql`
+      ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email text;
+    `);
+
+    logger.info("DB migrations applied (barcode, recovery_email, orders.status default+constraint, shipping_address nullable, customer_name, customer_email)");
   } catch (err) {
     logger.error({ err }, "Error applying DB migrations");
     throw err;

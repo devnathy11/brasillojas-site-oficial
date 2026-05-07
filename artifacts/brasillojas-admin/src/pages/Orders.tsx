@@ -71,15 +71,16 @@ function buildReportHtml(orders: OrderWithCustomer[]): string {
         .join("<br/>");
       const discountStr =
         order.discount > 0 ? `-${formatBRL(order.discount)}` : "—";
-      const customer = escHtml(order.customerName) !== "—"
+      const customerName = escHtml(order.customerName) !== "—"
         ? escHtml(order.customerName)
         : escHtml(order.userId);
+      const customerEmail = order.customerEmail ? `<br/><span style="color:#555;font-size:10px">${escHtml(order.customerEmail)}</span>` : "";
 
       return `
         <tr>
           <td>#${order.id}</td>
           <td>${escHtml(formatDate(order.createdAt))}</td>
-          <td>${customer}</td>
+          <td>${customerName}${customerEmail}</td>
           <td style="font-size:11px">${itemsList}</td>
           <td>${escHtml(order.paymentMethod ? (paymentLabel[order.paymentMethod] ?? order.paymentMethod) : "—")}</td>
           <td>${discountStr}</td>

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { cartItemsTable, productsTable, ordersTable } from "@workspace/db";
+import { cartItemsTable, productsTable, ordersTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { validateProfileComplete, validateDeliveryMethod } from "../lib/orderValidation";
@@ -143,6 +143,13 @@ router.post("/stripe/complete-order", async (req, res) => {
     const subtotal = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const stripeTotal = (session.amount_total ?? 0) / 100;
 
+    // Fetch customer info to store on the order
+    const userProfile = await db
+      .select({ name: usersTable.name, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .then((rows) => rows[0] ?? null);
+
     const [order] = await db.insert(ordersTable).values({
       userId,
       status: "criando",
@@ -154,6 +161,8 @@ router.post("/stripe/complete-order", async (req, res) => {
       shippingAddress: shippingAddress ?? null,
       paymentMethod: "credit_card",
       paymentStatus: "paid",
+      customerName: userProfile?.name ?? null,
+      customerEmail: userProfile?.email ?? null,
     }).returning();
 
     // Clear cart
