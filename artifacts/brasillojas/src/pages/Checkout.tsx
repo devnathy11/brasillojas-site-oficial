@@ -79,7 +79,7 @@ export default function CheckoutPage() {
   const createOrder = useCreateOrder();
   const updateProfile = useUpdateUserProfile();
   const { data: couponData } = useValidateCoupon(
-    { code: appliedCoupon },
+    appliedCoupon,
     { query: { enabled: !!appliedCoupon, retry: false } as any }
   );
 
@@ -122,7 +122,8 @@ export default function CheckoutPage() {
 
   async function handlePlaceOrder() {
     setStripeError("");
-    const shippingAddr = hasMoveis ? address : undefined;
+    // Address is always collected; use it for all orders
+    const shippingAddr = address;
 
     if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
       setStripeLoading(true);
@@ -158,14 +159,14 @@ export default function CheckoutPage() {
       {
         onSuccess: (order) => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-          if (hasMoveis && address.street) {
+          // Save address back to profile whenever one was entered
+          if (address.street && profile?.name) {
             updateProfile.mutate({
               data: {
-                name: profile?.name ?? "",
-                email: profile?.email ?? "",
-                recoveryEmail: profile?.recoveryEmail ?? "",
-                phone: profile?.phone ?? "",
-                address: shippingAddr ?? address,
+                name: profile.name,
+                email: profile.email,
+                phone: profile.phone ?? "",
+                address,
               },
             });
           }
@@ -222,40 +223,40 @@ export default function CheckoutPage() {
 
               {/* ---- STEP 1: Address ---- */}
               {step === "address" && (
-                <motion.div key="address" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }}>
-                  {hasMoveis && (
-                    <div className="bg-white rounded-xl border border-gray-200 p-5">
-                      <h2 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
-                        <Truck size={18} className="text-[#1B5E20]" /> Endereço de Entrega
-                      </h2>
-                      <p className="text-xs text-gray-500 mb-4">Para os móveis do seu pedido</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {[
-                          { field: "zipCode", label: "CEP", placeholder: "00000-000", cols: 1 },
-                          { field: "street", label: "Rua / Logradouro", placeholder: "Nome da rua", cols: 2 },
-                          { field: "number", label: "Número", placeholder: "123", cols: 1 },
-                          { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)", cols: 1 },
-                          { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro", cols: 2 },
-                          { field: "city", label: "Cidade", placeholder: "Nome da cidade", cols: 1 },
-                          { field: "state", label: "Estado", placeholder: "MA", cols: 1 },
-                        ].map(({ field, label, placeholder, cols }) => (
-                          <div key={field} style={{ gridColumn: `span ${cols}` }}>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-                            <input
-                              value={address[field as keyof typeof address] ?? ""}
-                              onChange={(e) => setAddress({ ...address, [field]: e.target.value })}
-                              placeholder={placeholder}
-                              required={field !== "complement"}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20]/20"
-                            />
-                          </div>
-                        ))}
-                      </div>
+                <motion.div key="address" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="space-y-4">
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h2 className="font-bold text-gray-800 flex items-center gap-2 mb-1">
+                      <Truck size={18} className="text-[#1B5E20]" /> Endereço
+                    </h2>
+                    <p className="text-xs text-gray-500 mb-4">
+                      {hasMoveis ? "Para entrega dos móveis do seu pedido" : "Para contato e registro do pedido"}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { field: "zipCode", label: "CEP", placeholder: "00000-000", cols: 1 },
+                        { field: "street", label: "Rua / Logradouro", placeholder: "Nome da rua", cols: 2 },
+                        { field: "number", label: "Número", placeholder: "123", cols: 1 },
+                        { field: "complement", label: "Complemento", placeholder: "Apto, Bloco (opcional)", cols: 1 },
+                        { field: "neighborhood", label: "Bairro", placeholder: "Nome do bairro", cols: 2 },
+                        { field: "city", label: "Cidade", placeholder: "Nome da cidade", cols: 1 },
+                        { field: "state", label: "Estado", placeholder: "MA", cols: 1 },
+                      ].map(({ field, label, placeholder, cols }) => (
+                        <div key={field} style={{ gridColumn: `span ${cols}` }}>
+                          <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+                          <input
+                            value={address[field as keyof typeof address] ?? ""}
+                            onChange={(e) => setAddress({ ...address, [field]: e.target.value })}
+                            placeholder={placeholder}
+                            required={field !== "complement"}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20]/20"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
 
                   {hasNonMoveis && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 mt-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
                       <Store size={20} className="text-amber-700 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-semibold text-amber-900 text-sm">Retirada na Loja</p>
@@ -271,8 +272,8 @@ export default function CheckoutPage() {
 
                   <button
                     onClick={() => setStep("payment")}
-                    disabled={hasMoveis && (!address.street || !address.number || !address.zipCode || !address.city || !address.state)}
-                    className="mt-4 w-full py-3.5 bg-[#1B5E20] hover:bg-[#2E7D32] disabled:bg-gray-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                    disabled={!address.street || !address.number || !address.zipCode || !address.city || !address.state}
+                    className="w-full py-3.5 bg-[#1B5E20] hover:bg-[#2E7D32] disabled:bg-gray-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
                     Continuar para Pagamento <ChevronRight size={18} />
                   </button>

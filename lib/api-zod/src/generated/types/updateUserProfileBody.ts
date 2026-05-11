@@ -8,7 +8,8 @@
 import type { Address } from "./address";
 
 export interface UpdateUserProfileBody {
-  name?: string;
-  phone?: string | null;
+  name: string;
+  email: string;
+  phone: string;
   address?: Address | null;
 }

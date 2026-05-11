@@ -13,4 +13,6 @@ export interface CartItem {
   price: number;
   quantity: number;
   stock: number;
+  categorySlug?: string | null;
+  categoryName?: string | null;
 }

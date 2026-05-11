@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, AlertCircle } from "lucide-react";
+import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, AlertCircle, Truck, Store } from "lucide-react";
 import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useGetUserProfile } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import type { UserProfile } from "@workspace/api-client-react";
@@ -13,18 +13,7 @@ import { formatBRL } from "@/lib/utils";
 
 function isProfileComplete(profile: UserProfile | null | undefined): boolean {
   if (!profile) return false;
-  return !!(
-    profile.name &&
-    profile.email &&
-    profile.recoveryEmail &&
-    profile.phone &&
-    profile.address?.zipCode &&
-    profile.address?.street &&
-    profile.address?.number &&
-    profile.address?.neighborhood &&
-    profile.address?.city &&
-    profile.address?.state
-  );
+  return !!(profile.name && profile.email && profile.phone);
 }
 
 export default function CartPage() {
@@ -114,6 +103,8 @@ export default function CartPage() {
   }
 
   const items = cart?.items ?? [];
+  const moveiItems = items.filter((i) => i.categorySlug === "moveis");
+  const nonMoveiItems = items.filter((i) => i.categorySlug !== "moveis");
   const isEmpty = items.length === 0;
   const subtotal = Number(cart?.subtotal ?? 0);
   const couponDiscount = couponData?.valid && couponData.coupon

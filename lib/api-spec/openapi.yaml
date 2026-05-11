@@ -781,6 +781,12 @@ components:
           type: integer
         stock:
           type: integer
+        categorySlug:
+          type: string
+          nullable: true
+        categoryName:
+          type: string
+          nullable: true
       required: [productId, name, imageUrl, price, quantity, stock]
 
     Cart:
@@ -968,12 +974,14 @@ components:
       properties:
         name:
           type: string
+        email:
+          type: string
         phone:
           type: string
-          nullable: true
         address:
           $ref: "#/components/schemas/Address"
           nullable: true
+      required: [name, email, phone]
 
     Coupon:
       type: object

@@ -19,13 +19,12 @@ router.get("/users/profile", async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      recoveryEmail: user.recoveryEmail,
       phone: user.phone,
       address: user.address,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -36,19 +35,12 @@ router.put("/users/profile", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const { name, email, recoveryEmail, phone, address } = req.body;
+    const { name, email, phone, address } = req.body;
 
     const missingFields: string[] = [];
     if (!name) missingFields.push("name");
     if (!email) missingFields.push("email");
-    if (!recoveryEmail) missingFields.push("recoveryEmail");
     if (!phone) missingFields.push("phone");
-    if (!address?.zipCode) missingFields.push("address.zipCode");
-    if (!address?.street) missingFields.push("address.street");
-    if (!address?.number) missingFields.push("address.number");
-    if (!address?.neighborhood) missingFields.push("address.neighborhood");
-    if (!address?.city) missingFields.push("address.city");
-    if (!address?.state) missingFields.push("address.state");
 
     if (missingFields.length > 0) {
       return res.status(422).json({ error: "Campos obrigatórios faltando", fields: missingFields });
@@ -61,9 +53,8 @@ router.put("/users/profile", async (req, res) => {
       [user] = await db.update(usersTable).set({
         name,
         email,
-        recoveryEmail,
         phone,
-        address,
+        address: address ?? existing.address,
         updatedAt: new Date(),
       }).where(eq(usersTable.id, userId)).returning();
     } else {
@@ -71,9 +62,8 @@ router.put("/users/profile", async (req, res) => {
         id: userId,
         name,
         email,
-        recoveryEmail,
         phone,
-        address,
+        address: address ?? undefined,
       }).returning();
     }
 
@@ -81,13 +71,12 @@ router.put("/users/profile", async (req, res) => {
       id: user.id,
       name: user.name,
       email: user.email,
-      recoveryEmail: user.recoveryEmail,
       phone: user.phone,
       address: user.address,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -24,7 +24,6 @@ export interface Product {
   stock: number;
   brand?: string | null;
   sku?: string | null;
-  barcode?: string | null;
   rating: number;
   reviewCount: number;
   isFeatured: boolean;
@@ -47,9 +46,7 @@ export interface CreateProductBody {
   stock: number;
   brand?: string | null;
   sku?: string | null;
-  barcode?: string | null;
   isFeatured?: boolean;
-  isActive?: boolean;
   specifications?: CreateProductBodySpecifications;
 }
 
@@ -101,7 +98,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   stock: number;
-  categorySlug?: string;
+  categorySlug?: string | null;
+  categoryName?: string | null;
 }
 
 export interface Cart {
@@ -204,7 +202,7 @@ export const CreateOrderBodyPaymentMethod = {
 } as const;
 
 export interface CreateOrderBody {
-  shippingAddress?: Address | null;
+  shippingAddress: Address;
   couponCode?: string | null;
   paymentMethod?: CreateOrderBodyPaymentMethod;
 }
@@ -237,17 +235,15 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  recoveryEmail?: string | null;
   phone?: string | null;
   address?: Address | null;
   createdAt: string;
 }
 
 export interface UpdateUserProfileBody {
-  name?: string;
-  email?: string | null;
-  recoveryEmail?: string | null;
-  phone?: string | null;
+  name: string;
+  email: string;
+  phone: string;
   address?: Address | null;
 }
 
@@ -287,7 +283,6 @@ export interface CreateCouponBody {
   minOrderAmount?: number | null;
   maxUses?: number | null;
   expiresAt?: string | null;
-  isActive?: boolean;
 }
 
 export type UpdateCouponBodyDiscountType =

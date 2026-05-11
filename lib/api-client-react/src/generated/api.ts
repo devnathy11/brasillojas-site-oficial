@@ -1609,7 +1609,6 @@ export const updateOrderStatus = async (
   return customFetch<Order>(getUpdateOrderStatusUrl(id), {
     ...options,
     method: "PUT",
-    headers: { "Content-Type": "application/json", ...options?.headers },
   });
 };
 
@@ -1644,6 +1643,7 @@ export const getUpdateOrderStatusMutationOptions = <
     { id: number }
   > = (props) => {
     const { id } = props ?? {};
+
     return updateOrderStatus(id, requestOptions);
   };
 
@@ -1653,8 +1653,12 @@ export const getUpdateOrderStatusMutationOptions = <
 export type UpdateOrderStatusMutationResult = NonNullable<
   Awaited<ReturnType<typeof updateOrderStatus>>
 >;
+
 export type UpdateOrderStatusMutationError = ErrorType<unknown>;
 
+/**
+ * @summary Advance order status (admin only)
+ */
 export const useUpdateOrderStatus = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -1689,7 +1693,6 @@ export const confirmDelivery = async (
   return customFetch<Order>(getConfirmDeliveryUrl(id), {
     ...options,
     method: "PUT",
-    headers: { "Content-Type": "application/json", ...options?.headers },
   });
 };
 
@@ -1724,6 +1727,7 @@ export const getConfirmDeliveryMutationOptions = <
     { id: number }
   > = (props) => {
     const { id } = props ?? {};
+
     return confirmDelivery(id, requestOptions);
   };
 
@@ -1733,8 +1737,12 @@ export const getConfirmDeliveryMutationOptions = <
 export type ConfirmDeliveryMutationResult = NonNullable<
   Awaited<ReturnType<typeof confirmDelivery>>
 >;
+
 export type ConfirmDeliveryMutationError = ErrorType<unknown>;
 
+/**
+ * @summary Confirm delivery (customer only)
+ */
 export const useConfirmDelivery = <
   TError = ErrorType<unknown>,
   TContext = unknown,

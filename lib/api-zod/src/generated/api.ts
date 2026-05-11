@@ -233,6 +233,8 @@ export const GetCartResponse = zod.object({
       price: zod.number(),
       quantity: zod.number(),
       stock: zod.number(),
+      categorySlug: zod.string().nullish(),
+      categoryName: zod.string().nullish(),
     }),
   ),
   subtotal: zod.number(),
@@ -259,6 +261,8 @@ export const AddToCartResponse = zod.object({
       price: zod.number(),
       quantity: zod.number(),
       stock: zod.number(),
+      categorySlug: zod.string().nullish(),
+      categoryName: zod.string().nullish(),
     }),
   ),
   subtotal: zod.number(),
@@ -288,6 +292,8 @@ export const UpdateCartItemResponse = zod.object({
       price: zod.number(),
       quantity: zod.number(),
       stock: zod.number(),
+      categorySlug: zod.string().nullish(),
+      categoryName: zod.string().nullish(),
     }),
   ),
   subtotal: zod.number(),
@@ -313,6 +319,8 @@ export const RemoveFromCartResponse = zod.object({
       price: zod.number(),
       quantity: zod.number(),
       stock: zod.number(),
+      categorySlug: zod.string().nullish(),
+      categoryName: zod.string().nullish(),
     }),
   ),
   subtotal: zod.number(),
@@ -498,6 +506,114 @@ export const GetOrderResponse = zod.object({
 });
 
 /**
+ * @summary Advance order status (admin only)
+ */
+export const UpdateOrderStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateOrderStatusResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  status: zod.enum([
+    "pending",
+    "confirmed",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+    "criando",
+    "processando",
+    "saiu_para_entrega",
+    "entregue",
+  ]),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      name: zod.string(),
+      imageUrl: zod.string(),
+      price: zod.number(),
+      quantity: zod.number(),
+    }),
+  ),
+  subtotal: zod.number(),
+  discount: zod.number(),
+  total: zod.number(),
+  couponCode: zod.string().nullish(),
+  shippingAddress: zod.object({
+    street: zod.string(),
+    number: zod.string(),
+    complement: zod.string().nullish(),
+    neighborhood: zod.string(),
+    city: zod.string(),
+    state: zod.string(),
+    zipCode: zod.string(),
+  }),
+  paymentMethod: zod
+    .enum(["pix", "credit_card", "debit_card", "boleto"])
+    .optional(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  customerName: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Confirm delivery (customer only)
+ */
+export const ConfirmDeliveryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ConfirmDeliveryResponse = zod.object({
+  id: zod.number(),
+  userId: zod.string(),
+  status: zod.enum([
+    "pending",
+    "confirmed",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+    "criando",
+    "processando",
+    "saiu_para_entrega",
+    "entregue",
+  ]),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      name: zod.string(),
+      imageUrl: zod.string(),
+      price: zod.number(),
+      quantity: zod.number(),
+    }),
+  ),
+  subtotal: zod.number(),
+  discount: zod.number(),
+  total: zod.number(),
+  couponCode: zod.string().nullish(),
+  shippingAddress: zod.object({
+    street: zod.string(),
+    number: zod.string(),
+    complement: zod.string().nullish(),
+    neighborhood: zod.string(),
+    city: zod.string(),
+    state: zod.string(),
+    zipCode: zod.string(),
+  }),
+  paymentMethod: zod
+    .enum(["pix", "credit_card", "debit_card", "boleto"])
+    .optional(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  customerName: zod.string().nullish(),
+  customerEmail: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
  * @summary Create a product review
  */
 export const createReviewBodyRatingMax = 5;
@@ -556,8 +672,9 @@ export const GetUserProfileResponse = zod.object({
  * @summary Update user profile
  */
 export const UpdateUserProfileBody = zod.object({
-  name: zod.string().optional(),
-  phone: zod.string().nullish(),
+  name: zod.string(),
+  email: zod.string(),
+  phone: zod.string(),
   address: zod
     .object({
       street: zod.string(),

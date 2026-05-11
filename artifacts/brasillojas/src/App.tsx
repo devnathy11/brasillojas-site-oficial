@@ -179,18 +179,7 @@ function ClerkQueryClientCacheInvalidator() {
 
 function isProfileComplete(profile: UserProfile | undefined): boolean {
   if (!profile) return false;
-  return !!(
-    profile.name &&
-    profile.email &&
-    profile.recoveryEmail &&
-    profile.phone &&
-    profile.address?.zipCode &&
-    profile.address?.street &&
-    profile.address?.number &&
-    profile.address?.neighborhood &&
-    profile.address?.city &&
-    profile.address?.state
-  );
+  return !!(profile.name && profile.email && profile.phone);
 }
 
 const PROFILE_EXEMPT_PATHS = ["/profile", "/sign-in", "/sign-up", "/suporte", "/orders", "/receipt", "/checkout"];
