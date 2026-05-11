@@ -118,9 +118,7 @@ function OrderTracker({ status }: { status: string }) {
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const orderId = Number(params.id);
-  const { data: order, isLoading } = useGetOrder(orderId, {
-    query: { enabled: !!orderId } as any,
-  });
+  const { data: order, isLoading } = useGetOrder(orderId);
   const queryClient = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -368,7 +366,7 @@ export default function OrderDetailPage() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">
-              {order.paymentMethod ? (PAYMENT_LABELS as Record<string, string>)[order.paymentMethod] ?? order.paymentMethod : "—"}
+              {order.paymentMethod != null ? (PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod) : "—"}
             </span>
             {order.paymentStatus === "paid" ? (
               <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700">

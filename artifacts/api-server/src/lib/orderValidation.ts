@@ -4,27 +4,17 @@ import { eq } from "drizzle-orm";
 
 /**
  * Validates that the user's profile is complete enough to place an order.
+ * Requires: name, email, and phone only.
  * Returns an error message string if incomplete, or null if complete.
  */
 export async function validateProfileComplete(userId: string): Promise<string | null> {
   const profileRows = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const profile = profileRows[0] ?? null;
-  const addr = profile?.address as Record<string, string> | null | undefined;
-  const complete =
-    profile &&
-    profile.name &&
-    profile.email &&
-    profile.recoveryEmail &&
-    profile.phone &&
-    addr?.zipCode &&
-    addr?.street &&
-    addr?.number &&
-    addr?.neighborhood &&
-    addr?.city &&
-    addr?.state;
+
+  const complete = profile && profile.name && profile.email && profile.phone;
 
   if (!complete) {
-    return "Perfil incompleto. Preencha nome, e-mail de recuperação, telefone e endereço completo antes de finalizar a compra.";
+    return "Perfil incompleto. Preencha nome, e-mail e telefone antes de finalizar a compra.";
   }
   return null;
 }
@@ -35,7 +25,7 @@ export async function validateProfileComplete(userId: string): Promise<string | 
  *
  * Rules:
  *   - Móveis items require a complete shippingAddress.
- *   - Non-Móveis-only carts must NOT provide a shippingAddress (store pickup only).
+ *   - All other orders may optionally include a shippingAddress (collected at checkout for all orders).
  */
 export async function validateDeliveryMethod(
   userId: string,
@@ -49,17 +39,12 @@ export async function validateDeliveryMethod(
     .where(eq(cartItemsTable.userId, userId));
 
   const hasMoveisItems = cartItems.some(({ category }) => category?.slug === "moveis");
-  const hasNonMoveisItems = cartItems.some(({ category }) => category?.slug !== "moveis");
 
   if (hasMoveisItems) {
     const sa = shippingAddress;
     if (!sa || !sa.street || !sa.number || !sa.neighborhood || !sa.city || !sa.state || !sa.zipCode) {
       return "Endereço de entrega obrigatório para itens da categoria Móveis. Preencha todos os campos do endereço.";
     }
-  }
-
-  if (!hasMoveisItems && hasNonMoveisItems && shippingAddress) {
-    return "Itens fora da categoria Móveis não permitem entrega. Retire na loja.";
   }
 
   return null;
