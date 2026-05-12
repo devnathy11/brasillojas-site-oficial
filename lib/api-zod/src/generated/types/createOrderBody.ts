@@ -9,7 +9,7 @@ import type { Address } from "./address";
 import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMethod";
 
 export interface CreateOrderBody {
-  shippingAddress: Address;
+  shippingAddress?: Address;
   couponCode?: string | null;
   paymentMethod?: CreateOrderBodyPaymentMethod;
 }

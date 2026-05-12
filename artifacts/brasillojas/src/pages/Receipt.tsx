@@ -13,7 +13,8 @@ const PAYMENT_LABELS: Record<string, string> = {
   pix: "PIX",
   credit_card: "Cartão de Crédito",
   debit_card: "Cartão de Débito",
-  boleto: "Boleto Bancário",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão na Loja",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -172,7 +173,6 @@ export default function ReceiptPage() {
   const protocolo = `BL-${String(order.id).padStart(8, "0")}`;
   const paid = order.paymentStatus === "paid";
   const pixCode = `00020126580014BR.GOV.BCB.PIX0130moveis@grupobrasillojas.com0217Pedido ${order.id}5204000053039865406${order.total.toFixed(2)}5802BR5910BRASILLOJAS6007PINHEIR62070503***6304CAFE`;
-  const fakeBoleto = `34191.79001 01043.510047 91020.${String(order.id).padStart(6, "0")} 1 ${String(Date.now()).slice(-14)}`;
   const isDeliveryPending = order.status === "saiu_para_entrega" && !confirmed;
   const isDelivered = order.status === "entregue" || confirmed;
 
@@ -330,22 +330,6 @@ export default function ReceiptPage() {
               <div className="bg-gray-50 border border-gray-300 p-2 break-all text-[10px] font-mono">{pixCode}</div>
               <div className="flex justify-center mt-2"><CopyBtn text={pixCode} /></div>
               <p className="mt-2 text-center text-gray-500">Vencimento: 30 minutos após o pedido</p>
-            </div>
-          )}
-          {order.paymentMethod === "boleto" && (
-            <div className="border-t-2 border-dashed border-gray-300 pt-3 mt-3 text-xs">
-              <p className="font-bold mb-2">BOLETO BANCÁRIO</p>
-              <div className="flex justify-center py-2">
-                <svg viewBox="0 0 200 60" className="w-full max-w-xs h-12">
-                  {Array.from({ length: 60 }).map((_, i) => (
-                    <rect key={i} x={i * 3.2 + 4} y={0} width={i % 3 === 0 ? 3 : i % 5 === 0 ? 1 : 2} height={60} fill="black" />
-                  ))}
-                </svg>
-              </div>
-              <p className="font-semibold mb-1">Linha Digitável:</p>
-              <div className="bg-gray-50 border border-gray-300 p-2 break-all text-[11px] font-mono text-center tracking-wider">{fakeBoleto}</div>
-              <div className="flex justify-center mt-2"><CopyBtn text={fakeBoleto} /></div>
-              <p className="mt-2 text-center text-gray-500">Vencimento: 3 dias úteis · Pague em qualquer banco ou lotérica</p>
             </div>
           )}
 

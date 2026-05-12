@@ -148,9 +148,8 @@ export type OrderPaymentMethod =
 
 export const OrderPaymentMethod = {
   pix: "pix",
-  credit_card: "credit_card",
-  debit_card: "debit_card",
-  boleto: "boleto",
+  dinheiro: "dinheiro",
+  cartao: "cartao",
 } as const;
 
 export type OrderPaymentStatus =
@@ -196,13 +195,12 @@ export type CreateOrderBodyPaymentMethod =
 
 export const CreateOrderBodyPaymentMethod = {
   pix: "pix",
-  credit_card: "credit_card",
-  debit_card: "debit_card",
-  boleto: "boleto",
+  dinheiro: "dinheiro",
+  cartao: "cartao",
 } as const;
 
 export interface CreateOrderBody {
-  shippingAddress: Address;
+  shippingAddress?: Address;
   couponCode?: string | null;
   paymentMethod?: CreateOrderBodyPaymentMethod;
 }

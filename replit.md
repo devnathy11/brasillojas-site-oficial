@@ -71,7 +71,14 @@ Full Brazilian e-commerce platform built as a pnpm workspace monorepo. Two custo
 - Product images use Unsplash URLs from seed data
 - Coupon codes: BEMVINDO10 (10%), FRETE0 (R$30 off), BLACK50 (50%)
 
-## Recent updates (Apr 2026)
+## Recent updates (May 2026)
+- **Stripe removed.** Payment is now PIX (5% off), Dinheiro, or Cartão na loja (customer goes to store). No online card processing.
+- **WhatsApp checkout redirect:** On order confirm, picks one random salesperson from a list of 10 and redirects to `wa.me/` with a pre-filled message containing all customer + order details.
+- **Delivery categories updated:** `moveis` + `eletronicos` = home delivery; all other categories = store pickup.
+- **Admin data reset:** `DELETE /api/admin/reset-data` endpoint + "Zerar Dados de Teste" button in admin Dashboard with 2-step confirmation.
+- **Boleto removed** from all UI and API spec; payment enum is now `[pix, dinheiro, cartao]`.
+
+## Apr 2026 updates
 - Real category/banner images and brand logo (logo.jpg) wired into Header, Footer, AdminLayout, Home, Receipt.
 - Add-to-cart fixed (auth-aware, click event no longer hijacked by ProductCard Link wrapper).
 - Category filters fixed: `Ofertas` returns products with discount, `Novidades` returns recently created products.

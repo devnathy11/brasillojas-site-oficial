@@ -103,8 +103,9 @@ export default function CartPage() {
   }
 
   const items = cart?.items ?? [];
-  const moveiItems = items.filter((i) => i.categorySlug === "moveis");
-  const nonMoveiItems = items.filter((i) => i.categorySlug !== "moveis");
+  const DELIVERY_SLUGS = ["moveis", "eletronicos"];
+  const moveiItems = items.filter((i) => DELIVERY_SLUGS.includes(i.categorySlug ?? ""));
+  const nonMoveiItems = items.filter((i) => !DELIVERY_SLUGS.includes(i.categorySlug ?? ""));
   const isEmpty = items.length === 0;
   const subtotal = Number(cart?.subtotal ?? 0);
   const couponDiscount = couponData?.valid && couponData.coupon

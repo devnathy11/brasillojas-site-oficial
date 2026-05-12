@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Package, ShoppingBag, DollarSign, AlertTriangle, Tag, TrendingUp, Calendar } from "lucide-react";
+import { Package, ShoppingBag, DollarSign, AlertTriangle, Tag, TrendingUp, Calendar, Trash2 } from "lucide-react";
 import { useGetAdminDashboard } from "@workspace/api-client-react";
+import { useAuth } from "@clerk/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatBRL } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -21,13 +24,46 @@ const STATUS_COLOR: Record<string, string> = {
 };
 const PAYMENT_LABEL: Record<string, string> = {
   pix: "PIX",
-  credit_card: "Crédito",
-  debit_card: "Débito",
-  boleto: "Boleto",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
 };
 
 export default function DashboardPage() {
-  const { data: stats, isLoading } = useGetAdminDashboard();
+  const { data: stats, isLoading, refetch } = useGetAdminDashboard();
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  async function handleResetData() {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+    setResetting(true);
+    setResetMessage("");
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/admin/reset-data", {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResetMessage("✅ " + data.message);
+        queryClient.invalidateQueries();
+        refetch();
+      } else {
+        setResetMessage("❌ " + (data.error ?? "Erro ao zerar dados."));
+      }
+    } catch {
+      setResetMessage("❌ Erro de conexão.");
+    } finally {
+      setResetting(false);
+      setConfirmReset(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -55,7 +91,42 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+
+        {/* Reset data button */}
+        <div className="flex items-center gap-3">
+          {resetMessage && (
+            <span className="text-sm font-medium text-gray-700">{resetMessage}</span>
+          )}
+          {confirmReset ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-red-700 font-medium">Confirmar? Isso apaga todos os pedidos.</span>
+              <button
+                onClick={handleResetData}
+                disabled={resetting}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
+              >
+                {resetting ? "Zerando..." : "Sim, zerar"}
+              </button>
+              <button
+                onClick={() => setConfirmReset(false)}
+                className="px-3 py-1.5 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleResetData}
+              className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-semibold text-sm rounded-lg transition-colors border border-red-200"
+            >
+              <Trash2 size={15} />
+              Zerar Dados de Teste
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

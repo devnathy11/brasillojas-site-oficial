@@ -370,9 +370,7 @@ export const ListOrdersResponseItem = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
-  paymentMethod: zod
-    .enum(["pix", "credit_card", "debit_card", "boleto"])
-    .optional(),
+  paymentMethod: zod.enum(["pix", "dinheiro", "cartao"]).optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   customerName: zod.string().nullish(),
   customerEmail: zod.string().nullish(),
@@ -385,19 +383,19 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  * @summary Place an order
  */
 export const CreateOrderBody = zod.object({
-  shippingAddress: zod.object({
-    street: zod.string(),
-    number: zod.string(),
-    complement: zod.string().nullish(),
-    neighborhood: zod.string(),
-    city: zod.string(),
-    state: zod.string(),
-    zipCode: zod.string(),
-  }),
-  couponCode: zod.string().nullish(),
-  paymentMethod: zod
-    .enum(["pix", "credit_card", "debit_card", "boleto"])
+  shippingAddress: zod
+    .object({
+      street: zod.string(),
+      number: zod.string(),
+      complement: zod.string().nullish(),
+      neighborhood: zod.string(),
+      city: zod.string(),
+      state: zod.string(),
+      zipCode: zod.string(),
+    })
     .optional(),
+  couponCode: zod.string().nullish(),
+  paymentMethod: zod.enum(["pix", "dinheiro", "cartao"]).optional(),
 });
 
 /**
@@ -440,9 +438,7 @@ export const ListAllOrdersResponseItem = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
-  paymentMethod: zod
-    .enum(["pix", "credit_card", "debit_card", "boleto"])
-    .optional(),
+  paymentMethod: zod.enum(["pix", "dinheiro", "cartao"]).optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   customerName: zod.string().nullish(),
   customerEmail: zod.string().nullish(),
@@ -495,9 +491,7 @@ export const GetOrderResponse = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
-  paymentMethod: zod
-    .enum(["pix", "credit_card", "debit_card", "boleto"])
-    .optional(),
+  paymentMethod: zod.enum(["pix", "dinheiro", "cartao"]).optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   customerName: zod.string().nullish(),
   customerEmail: zod.string().nullish(),
@@ -549,9 +543,7 @@ export const UpdateOrderStatusResponse = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
-  paymentMethod: zod
-    .enum(["pix", "credit_card", "debit_card", "boleto"])
-    .optional(),
+  paymentMethod: zod.enum(["pix", "dinheiro", "cartao"]).optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   customerName: zod.string().nullish(),
   customerEmail: zod.string().nullish(),
@@ -603,9 +595,7 @@ export const ConfirmDeliveryResponse = zod.object({
     state: zod.string(),
     zipCode: zod.string(),
   }),
-  paymentMethod: zod
-    .enum(["pix", "credit_card", "debit_card", "boleto"])
-    .optional(),
+  paymentMethod: zod.enum(["pix", "dinheiro", "cartao"]).optional(),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
   customerName: zod.string().nullish(),
   customerEmail: zod.string().nullish(),

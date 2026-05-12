@@ -11,7 +11,6 @@ export type CreateOrderBodyPaymentMethod =
 
 export const CreateOrderBodyPaymentMethod = {
   pix: "pix",
-  credit_card: "credit_card",
-  debit_card: "debit_card",
-  boleto: "boleto",
+  dinheiro: "dinheiro",
+  cartao: "cartao",
 } as const;

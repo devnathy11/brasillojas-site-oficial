@@ -1,7 +1,7 @@
 import { useParams } from "wouter";
 import { useEffect, useState } from "react";
 import { useGetOrder } from "@workspace/api-client-react";
-import { CheckCircle2, Clock, XCircle, Package, MapPin, CreditCard, Copy, Check, QrCode, FileText } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Package, MapPin, CreditCard, Copy, Check, QrCode } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { formatBRL, formatDate } from "@/lib/utils";
@@ -10,9 +10,8 @@ import QRCode from "qrcode";
 
 const paymentLabel: Record<string, string> = {
   pix: "PIX",
-  credit_card: "Cartão de Crédito",
-  debit_card: "Cartão de Débito",
-  boleto: "Boleto Bancário",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão na Loja",
 };
 
 function genPixCode(orderId: number, total: number): string {
@@ -22,10 +21,6 @@ function genPixCode(orderId: number, total: number): string {
   return `00020126580014BR.GOV.BCB.PIX0136${key}0213${desc}5204000053039865406${val}5802BR5910BRASILLOJAS6009PINHEIRO62070503***6304CAFE`;
 }
 
-function genBoletoCode(orderId: number): string {
-  const pad = String(orderId).padStart(8, "0");
-  return `34191.79001 01043.510047 91020.${pad} 1 ${String(Date.now()).slice(-14)}`;
-}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -84,44 +79,6 @@ function PixPaymentSection({ orderId, total }: { orderId: number; total: number 
   );
 }
 
-function BoletoPaymentSection({ orderId }: { orderId: number }) {
-  const boletoCode = genBoletoCode(orderId);
-
-  return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <FileText size={20} className="text-yellow-700" />
-        <h3 className="font-bold text-yellow-900">Boleto Bancário</h3>
-      </div>
-      <div className="space-y-3">
-        <div className="bg-white rounded-lg border border-yellow-200 p-3">
-          <p className="text-xs text-yellow-700 font-semibold mb-2">Código de Barras:</p>
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-center py-2">
-              <svg viewBox="0 0 200 60" className="w-full max-w-xs h-14" aria-label="Código de barras">
-                {Array.from({ length: 60 }).map((_, i) => (
-                  <rect
-                    key={i}
-                    x={i * 3.2 + 4}
-                    y={0}
-                    width={i % 3 === 0 ? 3 : i % 5 === 0 ? 1 : 2}
-                    height={60}
-                    fill="black"
-                  />
-                ))}
-              </svg>
-            </div>
-            <p className="text-center text-xs font-mono text-gray-700 tracking-wider">{boletoCode}</p>
-            <div className="flex justify-center">
-              <CopyButton text={boletoCode} />
-            </div>
-          </div>
-        </div>
-        <p className="text-xs text-yellow-800 text-center">⏱ Vencimento: 3 dias úteis · Pague em qualquer banco ou lotérica</p>
-      </div>
-    </div>
-  );
-}
 
 function PaymentStatusBadge({ status }: { status: string }) {
   if (status === "paid") {
@@ -190,7 +147,6 @@ export default function OrderConfirmationPage() {
 
   const addr = order.shippingAddress;
   const isPix = order.paymentMethod === "pix";
-  const isBoleto = order.paymentMethod === "boleto";
   const needsPayment = order.paymentStatus !== "paid";
 
   return (
@@ -210,11 +166,6 @@ export default function OrderConfirmationPage() {
           {/* PIX payment section */}
           {isPix && needsPayment && (
             <PixPaymentSection orderId={order.id} total={order.total} />
-          )}
-
-          {/* Boleto payment section */}
-          {isBoleto && needsPayment && (
-            <BoletoPaymentSection orderId={order.id} />
           )}
 
           {/* Order items */}

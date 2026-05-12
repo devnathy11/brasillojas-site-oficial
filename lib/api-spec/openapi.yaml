@@ -867,7 +867,7 @@ components:
           $ref: "#/components/schemas/Address"
         paymentMethod:
           type: string
-          enum: [pix, credit_card, debit_card, boleto]
+          enum: [pix, dinheiro, cartao]
         paymentStatus:
           type: string
           enum: [pending, paid, failed, refunded]
@@ -893,8 +893,8 @@ components:
           nullable: true
         paymentMethod:
           type: string
-          enum: [pix, credit_card, debit_card, boleto]
-      required: [shippingAddress]
+          enum: [pix, dinheiro, cartao]
+      required: []
 
     Address:
       type: object

@@ -38,12 +38,13 @@ export async function validateDeliveryMethod(
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(cartItemsTable.userId, userId));
 
-  const hasMoveisItems = cartItems.some(({ category }) => category?.slug === "moveis");
+  const DELIVERY_SLUGS = ["moveis", "eletronicos"];
+  const hasMoveisItems = cartItems.some(({ category }) => DELIVERY_SLUGS.includes(category?.slug ?? ""));
 
   if (hasMoveisItems) {
     const sa = shippingAddress;
     if (!sa || !sa.street || !sa.number || !sa.neighborhood || !sa.city || !sa.state || !sa.zipCode) {
-      return "Endereço de entrega obrigatório para itens da categoria Móveis. Preencha todos os campos do endereço.";
+      return "Endereço de entrega obrigatório para itens de grande porte (Móveis e Eletrônicos). Preencha todos os campos do endereço.";
     }
   }
 

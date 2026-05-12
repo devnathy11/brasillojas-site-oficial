@@ -2,36 +2,106 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CreditCard, QrCode, FileText, Wallet, Truck, Store, ChevronRight,
-  Check, ShoppingBag, ArrowLeft, Package, MapPin, Lock,
+  QrCode, Banknote, CreditCard, Truck, Store, ChevronRight,
+  Check, ShoppingBag, ArrowLeft, Package, MapPin, MessageCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   useGetCart, useCreateOrder, useGetUserProfile, useUpdateUserProfile, useValidateCoupon,
 } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
-import { Show, useAuth } from "@clerk/react";
+import { Show } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { formatBRL } from "@/lib/utils";
 
-type PaymentMethod = "pix" | "credit_card" | "debit_card" | "boleto";
+type PaymentMethod = "pix" | "dinheiro" | "cartao";
 type Step = "address" | "payment" | "review";
 
+// Category slugs that require home delivery (large/heavy items)
+const DELIVERY_SLUGS = ["moveis", "eletronicos"];
+
+// WhatsApp sellers list — picked randomly per order
+const SELLERS = [
+  { name: "Vendedora Fiama", phone: "5598999741848" },
+  { name: "Vendedor Hélio Gabriel", phone: "5598984913245" },
+  { name: "Vendedor Olicio", phone: "5598984796892" },
+  { name: "Vendedor Marcos", phone: "5598984167335" },
+  { name: "Vendedor Luiz Felipe", phone: "5598981202842" },
+  { name: "Vendedor Juvenal Abreu", phone: "5598987021225" },
+  { name: "Vendedor Clodomir", phone: "5598982585119" },
+  { name: "Vendedor Lopes", phone: "5598985009486" },
+  { name: "Vendedora Solange", phone: "5598989174488" },
+  { name: "Vendedora Luciana Moraes", phone: "5598984217100" },
+];
+
+function getRandomSeller() {
+  return SELLERS[Math.floor(Math.random() * SELLERS.length)];
+}
+
+function buildWhatsAppMessage(params: {
+  profile: { name: string; email: string; phone?: string | null };
+  items: Array<{ name: string; quantity: number; price: number }>;
+  subtotal: number;
+  pixDiscount: number;
+  couponDiscount: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  hasDelivery: boolean;
+  address: { street: string; number: string; complement?: string; neighborhood: string; city: string; state: string; zipCode: string };
+  orderId: number;
+}): string {
+  const { profile, items, subtotal, pixDiscount, couponDiscount, total, paymentMethod, hasDelivery, address, orderId } = params;
+
+  const paymentLabels: Record<PaymentMethod, string> = {
+    pix: "PIX (5% de desconto)",
+    dinheiro: "Dinheiro (pagamento na entrega/retirada)",
+    cartao: "Cartão na loja física (parcela em até 12x)",
+  };
+
+  const lines: string[] = [
+    "🛒 *Novo Pedido — BrasilLojas*",
+    "",
+    `*Cliente:* ${profile.name}`,
+    `*Telefone:* ${profile.phone ?? "não informado"}`,
+    `*E-mail:* ${profile.email}`,
+    "",
+    "*Itens do Pedido:*",
+    ...items.map((i) => `• ${i.name} (x${i.quantity}) — ${formatBRL(i.price * i.quantity)}`),
+    "",
+    `*Subtotal:* ${formatBRL(subtotal)}`,
+  ];
+
+  if (couponDiscount > 0) lines.push(`*Desconto Cupom:* -${formatBRL(couponDiscount)}`);
+  if (pixDiscount > 0) lines.push(`*Desconto PIX (5%):* -${formatBRL(pixDiscount)}`);
+  lines.push(`*Total:* ${formatBRL(total)}`);
+  lines.push("", `*Forma de Pagamento:* ${paymentLabels[paymentMethod]}`);
+
+  if (hasDelivery && address.street) {
+    lines.push("", "*Endereço de Entrega:*");
+    lines.push(`${address.street}, nº ${address.number}${address.complement ? `, ${address.complement}` : ""}`);
+    lines.push(`${address.neighborhood} — ${address.city}/${address.state}`);
+    lines.push(`CEP: ${address.zipCode}`);
+  } else {
+    lines.push("", "📍 *Retirada na loja:* Av. Getúlio Vargas, 1010 A — Centro, Pinheiro-MA");
+  }
+
+  lines.push("", `*Pedido nº:* #${orderId}`);
+  return lines.join("\n");
+}
+
 const PAYMENT_OPTIONS: Array<{ id: PaymentMethod; label: string; sub: string; icon: LucideIcon; badge?: string }> = [
-  { id: "pix", label: "PIX", sub: "Aprovação imediata", icon: QrCode, badge: "5% OFF" },
-  { id: "credit_card", label: "Cartão de Crédito", sub: "Em até 12x sem juros", icon: CreditCard },
-  { id: "debit_card", label: "Cartão de Débito", sub: "Aprovação imediata", icon: Wallet },
-  { id: "boleto", label: "Boleto Bancário", sub: "Vence em 3 dias úteis", icon: FileText },
+  { id: "pix", label: "PIX", sub: "5% de desconto no total", icon: QrCode, badge: "5% OFF" },
+  { id: "dinheiro", label: "Dinheiro", sub: "Pague na entrega ou retirada", icon: Banknote },
+  { id: "cartao", label: "Cartão (na loja)", sub: "Parcele em até 12x — passe na loja física", icon: CreditCard },
 ];
 
 const STEP_LABELS: Record<Step, string> = {
-  address: "Entrega",
+  address: "Endereço",
   payment: "Pagamento",
   review: "Revisão",
 };
-
 const STEPS: Step[] = ["address", "payment", "review"];
 
 function StepIndicator({ current }: { current: Step }) {
@@ -68,10 +138,8 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [couponError, setCouponError] = useState("");
-  const [stripeLoading, setStripeLoading] = useState(false);
-  const [stripeError, setStripeError] = useState("");
+  const [orderError, setOrderError] = useState("");
   const [, setLocation] = useLocation();
-  const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } as any });
@@ -83,7 +151,6 @@ export default function CheckoutPage() {
     { query: { enabled: !!appliedCoupon, retry: false } as any }
   );
 
-  // Pre-fill address from profile
   useEffect(() => {
     if (profile?.address?.street && !address.street) {
       setAddress({
@@ -101,10 +168,11 @@ export default function CheckoutPage() {
   const items = cart?.items ?? [];
   const isEmpty = items.length === 0;
   const subtotal = Number(cart?.subtotal ?? 0);
-  const moveiItems = items.filter((i) => i.categorySlug === "moveis");
-  const nonMoveiItems = items.filter((i) => i.categorySlug !== "moveis");
-  const hasMoveis = moveiItems.length > 0;
-  const hasNonMoveis = nonMoveiItems.length > 0;
+
+  const deliveryItems = items.filter((i) => DELIVERY_SLUGS.includes(i.categorySlug ?? ""));
+  const pickupItems = items.filter((i) => !DELIVERY_SLUGS.includes(i.categorySlug ?? ""));
+  const hasDelivery = deliveryItems.length > 0;
+  const hasPickup = pickupItems.length > 0;
 
   const couponDiscount = couponData?.valid && couponData.coupon
     ? couponData.coupon.discountType === "percentage"
@@ -121,56 +189,43 @@ export default function CheckoutPage() {
   }
 
   async function handlePlaceOrder() {
-    setStripeError("");
-    // Address is always collected; use it for all orders
-    const shippingAddr = address;
-
-    if (paymentMethod === "credit_card" || paymentMethod === "debit_card") {
-      setStripeLoading(true);
-      try {
-        const token = await getToken();
-        const res = await fetch("/api/stripe/create-checkout-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            shippingAddress: shippingAddr,
-            couponCode: appliedCoupon || undefined,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setStripeError(data.error ?? "Erro ao iniciar pagamento.");
-          setStripeLoading(false);
-          return;
-        }
-        window.location.href = data.url;
-      } catch {
-        setStripeError("Erro de conexão ao iniciar pagamento.");
-        setStripeLoading(false);
-      }
-      return;
-    }
-
+    setOrderError("");
     createOrder.mutate(
-      { data: { shippingAddress: shippingAddr, couponCode: appliedCoupon || undefined, paymentMethod } },
+      {
+        data: {
+          shippingAddress: hasDelivery ? address : undefined,
+          couponCode: appliedCoupon || undefined,
+          paymentMethod: paymentMethod as any,
+        },
+      },
       {
         onSuccess: (order) => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-          // Save address back to profile whenever one was entered
-          if (address.street && profile?.name) {
+
+          if (hasDelivery && address.street && profile?.name) {
             updateProfile.mutate({
-              data: {
-                name: profile.name,
-                email: profile.email,
-                phone: profile.phone ?? "",
-                address,
-              },
+              data: { name: profile.name, email: profile.email, phone: profile.phone ?? "", address },
             });
           }
-          setLocation(`/order-confirmation/${order.id}`);
+
+          const seller = getRandomSeller();
+          const message = buildWhatsAppMessage({
+            profile: { name: profile?.name ?? "", email: profile?.email ?? "", phone: profile?.phone },
+            items: items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
+            subtotal,
+            pixDiscount,
+            couponDiscount,
+            total,
+            paymentMethod,
+            hasDelivery,
+            address,
+            orderId: order.id,
+          });
+
+          window.location.href = `https://wa.me/${seller.phone}?text=${encodeURIComponent(message)}`;
+        },
+        onError: () => {
+          setOrderError("Erro ao registrar pedido. Verifique seu perfil e tente novamente.");
         },
       }
     );
@@ -180,7 +235,10 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-3xl mx-auto px-4 py-12 text-center text-gray-500">Carregando...</div>
+        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+          <div className="skeleton h-8 rounded w-1/2 mx-auto mb-4" />
+          <div className="skeleton h-64 rounded mb-4" />
+        </div>
       </div>
     );
   }
@@ -189,14 +247,15 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
           <ShoppingBag size={56} className="mx-auto text-gray-300 mb-4" />
-          <h2 className="text-xl font-bold text-gray-700 mb-2">Carrinho vazio</h2>
-          <p className="text-gray-500 mb-6">Adicione produtos para continuar.</p>
-          <Link href="/products" className="inline-flex items-center gap-2 bg-[#1B5E20] text-white font-bold px-6 py-3 rounded-lg">
-            Explorar Produtos
+          <h1 className="text-xl font-bold text-gray-700 mb-2">Carrinho vazio</h1>
+          <p className="text-gray-500 mb-6">Adicione produtos antes de finalizar a compra.</p>
+          <Link href="/products" className="inline-flex items-center gap-2 bg-[#1B5E20] text-white font-bold px-8 py-3 rounded-lg">
+            Ver Produtos
           </Link>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -206,22 +265,21 @@ export default function CheckoutPage() {
       <Header />
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Title + back */}
-        <div className="flex items-center gap-3 mb-6">
-          <Link href="/cart" className="text-gray-500 hover:text-gray-800 transition-colors">
-            <ArrowLeft size={20} />
+        <div className="flex items-center gap-2 mb-6">
+          <Link href="/cart" className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">
+            <ArrowLeft size={16} /> Carrinho
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800">Finalizar Compra</h1>
+          <span className="text-gray-300">/</span>
+          <span className="text-sm font-semibold text-gray-800">Finalizar Compra</span>
         </div>
 
         <StepIndicator current={step} />
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left: steps */}
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence mode="wait">
 
-              {/* ---- STEP 1: Address ---- */}
+              {/* STEP 1: Address */}
               {step === "address" && (
                 <motion.div key="address" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="space-y-4">
                   <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -229,7 +287,7 @@ export default function CheckoutPage() {
                       <Truck size={18} className="text-[#1B5E20]" /> Endereço
                     </h2>
                     <p className="text-xs text-gray-500 mb-4">
-                      {hasMoveis ? "Para entrega dos móveis do seu pedido" : "Para contato e registro do pedido"}
+                      {hasDelivery ? "Para entrega dos itens de grande porte" : "Para registro e contato do pedido"}
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {[
@@ -247,7 +305,6 @@ export default function CheckoutPage() {
                             value={address[field as keyof typeof address] ?? ""}
                             onChange={(e) => setAddress({ ...address, [field]: e.target.value })}
                             placeholder={placeholder}
-                            required={field !== "complement"}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20]/20"
                           />
                         </div>
@@ -255,13 +312,13 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {hasNonMoveis && (
+                  {hasPickup && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
                       <Store size={20} className="text-amber-700 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-semibold text-amber-900 text-sm">Retirada na Loja</p>
                         <p className="text-xs text-amber-800 mt-1">
-                          {nonMoveiItems.map((i) => i.name).join(", ")} {nonMoveiItems.length === 1 ? "será retirado" : "serão retirados"} na nossa loja física.
+                          {pickupItems.map((i) => i.name).join(", ")} {pickupItems.length === 1 ? "será retirado" : "serão retirados"} na nossa loja física.
                         </p>
                         <p className="text-xs text-amber-700 mt-1.5 font-medium">
                           Av. Getúlio Vargas, 1010 A — Centro, Pinheiro-MA · (98) 3381-4556
@@ -280,14 +337,14 @@ export default function CheckoutPage() {
                 </motion.div>
               )}
 
-              {/* ---- STEP 2: Payment ---- */}
+              {/* STEP 2: Payment */}
               {step === "payment" && (
                 <motion.div key="payment" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="space-y-4">
                   <div className="bg-white rounded-xl border border-gray-200 p-5">
                     <h2 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
                       <CreditCard size={18} className="text-[#1B5E20]" /> Forma de Pagamento
                     </h2>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       {PAYMENT_OPTIONS.map((opt) => {
                         const Icon = opt.icon;
                         return (
@@ -305,7 +362,7 @@ export default function CheckoutPage() {
                                 {opt.badge}
                               </span>
                             )}
-                            <Icon size={22} className={paymentMethod === opt.id ? "text-[#1B5E20] mb-2" : "text-gray-500 mb-2"} />
+                            <Icon size={22} className={`mb-2 ${paymentMethod === opt.id ? "text-[#1B5E20]" : "text-gray-500"}`} />
                             <p className={`text-sm font-semibold ${paymentMethod === opt.id ? "text-[#1B5E20]" : "text-gray-800"}`}>
                               {opt.label}
                             </p>
@@ -320,25 +377,23 @@ export default function CheckoutPage() {
                       })}
                     </div>
 
-                    {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
-                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-sm text-blue-800 font-medium">
-                          <Lock size={14} />
-                          Pagamento seguro processado pela Stripe
-                        </div>
-                        <p className="text-xs text-blue-700 mt-1">
-                          Você será redirecionado para a página de pagamento seguro da Stripe para inserir seus dados do cartão.
-                        </p>
-                      </div>
-                    )}
                     {paymentMethod === "pix" && (
                       <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                        Após confirmar, você receberá o QR code e o código Pix copia e cola.
+                        <p className="font-semibold mb-1">⚡ Pagamento via PIX — 5% OFF</p>
+                        <p className="text-xs">Após confirmar, você receberá a chave PIX via WhatsApp. Pague e aguarde a confirmação do vendedor.</p>
                       </div>
                     )}
-                    {paymentMethod === "boleto" && (
-                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                        Boleto com vencimento em 3 dias úteis. Pague em qualquer banco ou lotérica.
+                    {paymentMethod === "dinheiro" && (
+                      <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        <p className="font-semibold mb-1">💵 Pagamento em Dinheiro</p>
+                        <p className="text-xs">Pague no momento da entrega ou ao retirar na loja. Combine os detalhes com o vendedor via WhatsApp.</p>
+                      </div>
+                    )}
+                    {paymentMethod === "cartao" && (
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                        <p className="font-semibold mb-1">💳 Cartão na Loja Física</p>
+                        <p className="text-xs">Após confirmar, compareça à nossa loja para passar o cartão. Parcelamos em até 12x sem juros!</p>
+                        <p className="text-xs mt-1 font-medium">Av. Getúlio Vargas, 1010 A — Centro, Pinheiro-MA</p>
                       </div>
                     )}
                   </div>
@@ -376,10 +431,9 @@ export default function CheckoutPage() {
                 </motion.div>
               )}
 
-              {/* ---- STEP 3: Review & Pay ---- */}
+              {/* STEP 3: Review & Confirm */}
               {step === "review" && (
                 <motion.div key="review" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} className="space-y-4">
-                  {/* Items */}
                   <div className="bg-white rounded-xl border border-gray-200 p-5">
                     <h2 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
                       <Package size={18} className="text-[#1B5E20]" /> Itens do Pedido
@@ -398,8 +452,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Delivery info */}
-                  {hasMoveis && address.street && (
+                  {hasDelivery && address.street && (
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <MapPin size={16} className="text-[#1B5E20]" />
@@ -413,7 +466,6 @@ export default function CheckoutPage() {
                     </div>
                   )}
 
-                  {/* Payment method */}
                   <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CreditCard size={16} className="text-[#1B5E20]" />
@@ -424,8 +476,8 @@ export default function CheckoutPage() {
                     <button onClick={() => setStep("payment")} className="text-xs text-[#1B5E20] hover:underline">Alterar</button>
                   </div>
 
-                  {stripeError && (
-                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{stripeError}</p>
+                  {orderError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{orderError}</p>
                   )}
 
                   <div className="flex gap-3">
@@ -435,41 +487,41 @@ export default function CheckoutPage() {
                     <Show when="signed-in">
                       <button
                         onClick={handlePlaceOrder}
-                        disabled={createOrder.isPending || stripeLoading}
-                        className="flex-1 py-3.5 bg-[#C62828] hover:bg-[#B71C1C] disabled:bg-gray-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                        disabled={createOrder.isPending}
+                        className="flex-1 py-3.5 bg-[#25D366] hover:bg-[#1DAA56] disabled:bg-gray-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
                       >
-                        {createOrder.isPending || stripeLoading ? (
+                        {createOrder.isPending ? (
                           <>
                             <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                             </svg>
-                            Processando...
+                            Registrando...
                           </>
                         ) : (
                           <>
-                            <Lock size={16} />
-                            Confirmar e Pagar {formatBRL(total)}
+                            <MessageCircle size={18} />
+                            Confirmar e ir para WhatsApp
                           </>
                         )}
                       </button>
                     </Show>
                     <Show when="signed-out">
                       <Link href="/sign-in" className="flex-1 py-3.5 bg-[#C62828] text-white font-bold rounded-xl flex items-center justify-center gap-2 text-center">
-                        Entrar para Pagar
+                        Entrar para Finalizar
                       </Link>
                     </Show>
                   </div>
 
-                  <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1">
-                    <Lock size={11} /> Pagamento 100% seguro e criptografado
+                  <p className="text-center text-xs text-gray-400">
+                    Ao confirmar, você será direcionado ao WhatsApp de um vendedor para finalizar o pagamento.
                   </p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Right: Order summary */}
+          {/* Order summary sidebar */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-gray-200 p-5 sticky top-24">
               <h3 className="font-bold text-gray-800 mb-4">Resumo do Pedido</h3>
@@ -482,9 +534,7 @@ export default function CheckoutPage() {
                     <p className="text-xs font-semibold text-gray-800 flex-shrink-0">{formatBRL(item.price * item.quantity)}</p>
                   </div>
                 ))}
-                {items.length > 3 && (
-                  <p className="text-xs text-gray-400">+{items.length - 3} mais item(s)</p>
-                )}
+                {items.length > 3 && <p className="text-xs text-gray-400">+{items.length - 3} mais item(s)</p>}
               </div>
 
               <hr className="border-gray-100 mb-3" />
@@ -519,13 +569,13 @@ export default function CheckoutPage() {
                 <span className="text-[#C62828] text-lg">{formatBRL(total)}</span>
               </div>
 
-              {hasMoveis && (
+              {hasDelivery && (
                 <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
                   <Truck size={13} className="text-[#1B5E20]" />
-                  <span>Entrega disponível para móveis</span>
+                  <span>Entrega para itens de grande porte</span>
                 </div>
               )}
-              {hasNonMoveis && (
+              {hasPickup && (
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
                   <Store size={13} className="text-amber-600" />
                   <span>Retirada na loja para demais itens</span>

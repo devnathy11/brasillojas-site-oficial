@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db } from "@workspace/db";
-import { productsTable, ordersTable, usersTable, couponsTable } from "@workspace/db";
+import { productsTable, ordersTable, usersTable, couponsTable, cartItemsTable } from "@workspace/db";
 import { sql, desc } from "drizzle-orm";
 
 const router = Router();
@@ -53,6 +53,32 @@ router.get("/admin/dashboard", async (req, res) => {
         orders: Number(r.orders),
       })),
     });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /api/admin/reset-data — wipes all orders and cart items for testing
+router.delete("/admin/reset-data", async (req, res) => {
+  const { userId } = getAuth(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const isAdmin =
+      user.publicMetadata?.role === "admin" ||
+      (adminEmail &&
+        user.emailAddresses.some(
+          (e) => e.emailAddress.toLowerCase() === adminEmail.toLowerCase()
+        ));
+
+    if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+
+    await db.delete(cartItemsTable);
+    await db.delete(ordersTable);
+
+    res.json({ message: "Dados zerados com sucesso. Pedidos e carrinhos removidos." });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
   }

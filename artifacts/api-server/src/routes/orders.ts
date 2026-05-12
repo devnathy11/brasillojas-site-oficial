@@ -286,12 +286,14 @@ router.post("/orders", async (req, res) => {
       }
     }
 
-    const total = Math.max(0, subtotal - discount);
+    const total = Math.max(0, subtotal - discount - pixDiscount);
 
-    const validMethods = ["pix", "credit_card", "debit_card", "boleto"];
+    const validMethods = ["pix", "dinheiro", "cartao"];
     const method = validMethods.includes(paymentMethod) ? paymentMethod : "pix";
-    const paymentStatus =
-      method === "credit_card" || method === "debit_card" ? "paid" : "pending";
+    const paymentStatus = "pending"; // All orders are confirmed via WhatsApp
+
+    // Apply PIX discount on the server side
+    const pixDiscount = method === "pix" ? subtotal * 0.05 : 0;
 
     // Fetch customer info to store on the order
     const userProfile = await db
@@ -305,7 +307,7 @@ router.post("/orders", async (req, res) => {
       status: "criando",
       items,
       subtotal: subtotal.toFixed(2),
-      discount: discount.toFixed(2),
+      discount: (discount + pixDiscount).toFixed(2),
       total: total.toFixed(2),
       couponCode: couponCodeApplied ?? null,
       shippingAddress: shippingAddress ?? null,
