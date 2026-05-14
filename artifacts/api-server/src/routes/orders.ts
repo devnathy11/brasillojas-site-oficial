@@ -342,14 +342,13 @@ router.post("/orders", async (req, res) => {
       }
     }
 
-    const total = Math.max(0, subtotal - discount - pixDiscount);
-
     const validMethods = ["pix", "dinheiro", "cartao"];
     const method = validMethods.includes(paymentMethod) ? paymentMethod : "pix";
     const paymentStatus = "pending"; // All orders are confirmed via WhatsApp
 
     // Apply PIX discount on the server side
     const pixDiscount = method === "pix" ? subtotal * 0.05 : 0;
+    const total = Math.max(0, subtotal - discount - pixDiscount);
 
     // Fetch customer info to store on the order
     const userProfile = await db

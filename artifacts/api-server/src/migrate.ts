@@ -29,7 +29,7 @@ export async function runMigrations() {
     await db.execute(sql`
       ALTER TABLE orders ADD CONSTRAINT orders_status_check
         CHECK (status IN (
-          'pending','confirmed','processing','shipped','delivered','cancelled',
+          'pending','confirmed','processing','shipped','delivered','cancelled','cancelado',
           'criando','processando','saiu_para_entrega','entregue'
         ));
     `);

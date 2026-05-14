@@ -4,26 +4,15 @@ import OpenAI from "openai";
 const OPENAI_BASE_URL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
 const OPENAI_API_KEY = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
-if (!OPENAI_BASE_URL || !OPENAI_API_KEY) {
-  throw new Error(
-    "Missing required env vars: AI_INTEGRATIONS_OPENAI_BASE_URL and AI_INTEGRATIONS_OPENAI_API_KEY must be set"
-  );
-}
-
 const router = Router();
-
-const openai = new OpenAI({
-  apiKey: OPENAI_API_KEY,
-  baseURL: OPENAI_BASE_URL,
-});
 
 const SYSTEM_PROMPT = `Você é a assistente virtual da BrasilLojas, uma loja online brasileira de confiança. Seu nome é Bruna e você representa a BrasilLojas com simpatia e profissionalismo.
 
 Você pode ajudar os clientes com:
 - Informações sobre produtos e categorias disponíveis (Móveis, Eletrodomésticos, Eletrônicos, Roupas & Confecções, Calçados, Brinquedos e mais)
 - Como fazer uma compra no site
-- Formas de pagamento aceitas (cartão de crédito via Stripe, e Pix)
-- Informações sobre entrega: produtos da categoria Móveis têm frete grátis com entrega em domicílio; todas as outras categorias são retiradas na loja
+- Formas de pagamento aceitas: PIX (5% de desconto), Dinheiro na loja ou Cartão na loja
+- Informações sobre entrega: produtos das categorias Móveis e Eletrônicos têm entrega em domicílio; todas as outras categorias são retiradas na loja
 - Trocas e devoluções: até 7 dias corridos após o recebimento para produtos com defeito ou divergência, sem custo ao cliente
 - Criação e gerenciamento de conta
 - Carrinho de compras
@@ -61,6 +50,11 @@ interface ChatMessage {
 }
 
 router.post("/support/chat", async (req, res) => {
+  if (!OPENAI_BASE_URL || !OPENAI_API_KEY) {
+    res.status(503).json({ error: "Assistente virtual não configurado." });
+    return;
+  }
+
   const forwardedFor = req.headers["x-forwarded-for"];
   const ip =
     (typeof forwardedFor === "string" ? forwardedFor.split(",")[0].trim() : undefined) ||
@@ -107,6 +101,8 @@ router.post("/support/chat", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+
+  const openai = new OpenAI({ apiKey: OPENAI_API_KEY, baseURL: OPENAI_BASE_URL });
 
   try {
     const stream = await openai.chat.completions.create({

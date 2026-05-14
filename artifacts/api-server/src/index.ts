@@ -1,7 +1,18 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { getUncachableStripeClient } from "./stripeClient";
 import { runMigrations } from "./migrate";
+
+process.on("SIGTERM", () => process.exit(0));
+process.on("SIGINT", () => process.exit(0));
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection");
+  process.exit(1);
+});
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception");
+  process.exit(1);
+});
 
 const rawPort = process.env["PORT"];
 
@@ -15,39 +26,18 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-async function initStripe() {
-  try {
-    // Validate credentials by fetching a fresh client — throws if not connected
-    const stripe = await getUncachableStripeClient();
-
-    // Quick connectivity check
-    await stripe.paymentMethods.list({ limit: 1 });
-
-    logger.info("Stripe connection verified successfully");
-  } catch (err: any) {
-    // Non-fatal: server starts, but Stripe payments won't work until integration is active
-    logger.warn(
-      { msg: err?.message },
-      "Stripe init skipped — integration not connected or not configured"
-    );
-  }
-}
-
-// Run DB migrations before starting the server
 runMigrations()
   .then(() => {
-    app.listen(port, (err) => {
-      if (err) {
-        logger.error({ err }, "Error listening on port");
-        process.exit(1);
-      }
+    const server = app.listen(port, "0.0.0.0", () => {
       logger.info({ port }, "Server listening");
+    });
 
-      // Initialize Stripe after server starts (non-blocking)
-      initStripe();
+    server.on("error", (err) => {
+      logger.error({ err }, "Server listen error");
+      process.exit(1);
     });
   })
   .catch((err) => {
-    logger.error({ err }, "Fatal: DB migration failed, server will not start");
+    logger.error({ err }, "Fatal: DB migration failed");
     process.exit(1);
   });
