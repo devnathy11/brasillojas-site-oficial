@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShoppingBag, Printer, ChevronRight, Eye } from "lucide-react";
+import { ShoppingBag, Printer, ChevronRight, Eye, Check, X, BadgeDollarSign } from "lucide-react";
 import { useListAllOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useAuth } from "@clerk/react";
 import type { Order } from "@workspace/api-client-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ const statusLabel: Record<string, string> = {
   shipped: "Enviado",
   delivered: "Entregue",
   cancelled: "Cancelado",
+  cancelado: "Cancelado",
   criando: "Criando produto",
   processando: "Em processamento",
   saiu_para_entrega: "Saiu para entrega",
@@ -27,6 +29,7 @@ const statusColor: Record<string, string> = {
   shipped: "bg-indigo-100 text-indigo-800",
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
+  cancelado: "bg-red-100 text-red-800",
   criando: "bg-orange-100 text-orange-800",
   processando: "bg-purple-100 text-purple-800",
   saiu_para_entrega: "bg-blue-100 text-blue-800",
@@ -35,6 +38,8 @@ const statusColor: Record<string, string> = {
 
 const paymentLabel: Record<string, string> = {
   pix: "PIX",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão na Loja",
   credit_card: "Cartão de Crédito",
   debit_card: "Cartão de Débito",
   boleto: "Boleto Bancário",
@@ -241,6 +246,75 @@ function AdvanceStatusButton({ order }: { order: OrderWithCustomer }) {
   );
 }
 
+function OrderActionButtons({ order }: { order: OrderWithCustomer }) {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const isDone = order.status === "entregue" || order.status === "cancelado";
+  if (isDone) return null;
+
+  async function callAction(action: "confirm-payment" | "cancel") {
+    setLoading(action);
+    setError(null);
+    try {
+      const token = await getToken();
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const response = await fetch(`${base}/api/orders/${order.id}/${action}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? "Erro ao atualizar pedido");
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/all"] });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro desconhecido");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1 mt-1">
+      {order.paymentStatus !== "paid" && (
+        <button
+          onClick={() => callAction("confirm-payment")}
+          disabled={loading !== null}
+          title="Confirmar que o pagamento foi recebido"
+          className="flex items-center gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-2.5 py-1.5 rounded-md font-semibold transition-colors whitespace-nowrap"
+        >
+          <BadgeDollarSign size={12} />
+          {loading === "confirm-payment" ? "Confirmando..." : "Confirmar Pagamento"}
+        </button>
+      )}
+      {order.paymentStatus === "paid" && (
+        <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold px-2 py-1">
+          <Check size={11} /> Pago
+        </span>
+      )}
+      <button
+        onClick={() => {
+          if (!confirm(`Cancelar o pedido #${order.id}? O cliente poderá ver que foi cancelado.`)) return;
+          callAction("cancel");
+        }}
+        disabled={loading !== null}
+        title="Cancelar este pedido"
+        className="flex items-center gap-1 text-xs bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white px-2.5 py-1.5 rounded-md font-semibold transition-colors whitespace-nowrap"
+      >
+        <X size={12} />
+        {loading === "cancel" ? "Cancelando..." : "Cancelar Pedido"}
+      </button>
+      {error && <p className="text-xs text-red-600 mt-0.5">{error}</p>}
+    </div>
+  );
+}
+
 export default function OrdersPage() {
   const { data: orders, isLoading } = useListAllOrders();
   const typedOrders = (orders ?? []) as OrderWithCustomer[];
@@ -331,7 +405,12 @@ export default function OrdersPage() {
                       ))}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {order.paymentMethod ? (paymentLabel[order.paymentMethod] ?? order.paymentMethod) : "—"}
+                      <div>{order.paymentMethod ? (paymentLabel[order.paymentMethod] ?? order.paymentMethod) : "—"}</div>
+                      {order.paymentStatus === "paid" && (
+                        <span className="text-xs text-emerald-600 font-semibold flex items-center gap-0.5">
+                          <Check size={10} /> Pago
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-gray-800">{formatBRL(order.total)}</td>
                     <td className="px-4 py-3">
@@ -340,22 +419,25 @@ export default function OrdersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setLocation(`/orders/${order.id}`)}
-                          title="Ver detalhes"
-                          className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        <button
-                          onClick={() => handlePrintReceipt(order)}
-                          title="Imprimir Comprovante"
-                          className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
-                        >
-                          <Printer size={15} />
-                        </button>
-                        <AdvanceStatusButton order={order} />
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setLocation(`/orders/${order.id}`)}
+                            title="Ver detalhes"
+                            className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
+                            onClick={() => handlePrintReceipt(order)}
+                            title="Imprimir Comprovante"
+                            className="p-1.5 text-gray-500 hover:text-[#1B5E20] hover:bg-green-50 rounded transition-colors"
+                          >
+                            <Printer size={15} />
+                          </button>
+                          <AdvanceStatusButton order={order} />
+                        </div>
+                        <OrderActionButtons order={order} />
                       </div>
                     </td>
                   </motion.tr>

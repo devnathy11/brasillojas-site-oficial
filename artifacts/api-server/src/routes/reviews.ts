@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { reviewsTable, ordersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { reviewsTable, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
 
 const router = Router();
@@ -25,6 +25,7 @@ router.get("/products/:productId/reviews", async (req, res) => {
       createdAt: r.createdAt.toISOString(),
     })));
   } catch (err) {
+    req.log.error({ err }, "GET /products/:productId/reviews failed");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -37,11 +38,36 @@ router.post("/reviews", async (req, res) => {
   try {
     const { productId, rating, comment } = req.body;
 
+    if (!productId || !rating) {
+      return res.status(422).json({ error: "productId e rating são obrigatórios" });
+    }
+
+    // Fetch Clerk user info
     let userName = "Usuário";
+    let userEmail = "";
     try {
-      const user = await clerkClient().users.getUser(userId);
-      userName = user.fullName ?? user.firstName ?? "Usuário";
+      const clerkUser = await clerkClient().users.getUser(userId);
+      userName = clerkUser.fullName ?? clerkUser.firstName ?? "Usuário";
+      userEmail = clerkUser.emailAddresses[0]?.emailAddress ?? "";
     } catch {}
+
+    // Ensure the user exists in our DB (required by FK constraint on reviewsTable)
+    const existing = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+    if (!existing) {
+      await db
+        .insert(usersTable)
+        .values({
+          id: userId,
+          name: userName,
+          email: userEmail || `${userId}@placeholder.brasillojas`,
+          phone: null,
+          address: null,
+        })
+        .onConflictDoUpdate({
+          target: usersTable.id,
+          set: { updatedAt: new Date() },
+        });
+    }
 
     const [review] = await db.insert(reviewsTable).values({
       productId,
@@ -61,6 +87,7 @@ router.post("/reviews", async (req, res) => {
       createdAt: review.createdAt.toISOString(),
     });
   } catch (err) {
+    req.log.error({ err }, "POST /reviews failed");
     res.status(500).json({ error: "Internal server error" });
   }
 });

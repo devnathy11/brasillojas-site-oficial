@@ -24,6 +24,7 @@ export interface Product {
   stock: number;
   brand?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   rating: number;
   reviewCount: number;
   isFeatured: boolean;
@@ -46,6 +47,7 @@ export interface CreateProductBody {
   stock: number;
   brand?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   isFeatured?: boolean;
   specifications?: CreateProductBodySpecifications;
 }
@@ -63,6 +65,7 @@ export interface UpdateProductBody {
   stock?: number;
   brand?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   isFeatured?: boolean;
   isActive?: boolean;
   specifications?: UpdateProductBodySpecifications;
@@ -137,6 +140,7 @@ export const OrderStatus = {
   shipped: "shipped",
   delivered: "delivered",
   cancelled: "cancelled",
+  cancelado: "cancelado",
   criando: "criando",
   processando: "processando",
   saiu_para_entrega: "saiu_para_entrega",
@@ -281,6 +285,7 @@ export interface CreateCouponBody {
   minOrderAmount?: number | null;
   maxUses?: number | null;
   expiresAt?: string | null;
+  isActive?: boolean;
 }
 
 export type UpdateCouponBodyDiscountType =

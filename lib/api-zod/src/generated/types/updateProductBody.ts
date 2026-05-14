@@ -18,6 +18,7 @@ export interface UpdateProductBody {
   stock?: number;
   brand?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   isFeatured?: boolean;
   isActive?: boolean;
   specifications?: UpdateProductBodySpecifications;

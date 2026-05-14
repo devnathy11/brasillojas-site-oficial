@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit, Trash2, Search, Star, Package } from "lucide-react";
-import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useListCategories } from "@workspace/api-client-react";
+import { Plus, Edit, Trash2, Search, Package, ImagePlus, X } from "lucide-react";
+import {
+  useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useListCategories,
+  deleteProduct as deleteProductApi,
+} from "@workspace/api-client-react";
 import type { Product, CreateProductBody } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBRL } from "@/lib/utils";
@@ -31,6 +34,7 @@ export default function ProductsPage() {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const { data, isLoading } = useListProducts({ search: search || undefined });
   const { data: categories } = useListCategories();
@@ -55,7 +59,7 @@ export default function ProductsPage() {
       price: product.price,
       originalPrice: product.originalPrice ?? undefined,
       imageUrl: product.imageUrl,
-      images: product.images,
+      images: product.images ?? [],
       categoryId: product.categoryId,
       stock: product.stock,
       brand: product.brand ?? undefined,
@@ -70,12 +74,14 @@ export default function ProductsPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const cleanImages = (form.images ?? []).filter((url) => url.trim() !== "");
+    const formData = { ...form, images: cleanImages };
     if (editProduct) {
-      updateProduct.mutate({ id: editProduct.id, data: form }, {
+      updateProduct.mutate({ id: editProduct.id, data: formData }, {
         onSuccess: () => { queryClient.invalidateQueries(); setShowForm(false); },
       });
     } else {
-      createProduct.mutate({ data: form }, {
+      createProduct.mutate({ data: formData }, {
         onSuccess: () => { queryClient.invalidateQueries(); setShowForm(false); },
       });
     }
@@ -103,12 +109,33 @@ export default function ProductsPage() {
     }
   }
 
-  function handleBulkDelete() {
+  async function handleBulkDelete() {
     if (!confirm(`Tem certeza que deseja excluir ${selectedProducts.size} produto(s)?`)) return;
-    selectedProducts.forEach((id) => {
-      deleteProduct.mutate({ id }, { onSuccess: () => queryClient.invalidateQueries() });
-    });
+    const ids = Array.from(selectedProducts);
     setSelectedProducts(new Set());
+    setBulkDeleting(true);
+    try {
+      await Promise.allSettled(ids.map((id) => deleteProductApi(id)));
+    } finally {
+      setBulkDeleting(false);
+      queryClient.invalidateQueries();
+    }
+  }
+
+  function addImageUrl() {
+    if ((form.images ?? []).length >= 10) return;
+    setForm({ ...form, images: [...(form.images ?? []), ""] });
+  }
+
+  function updateImageUrl(idx: number, value: string) {
+    const updated = [...(form.images ?? [])];
+    updated[idx] = value;
+    setForm({ ...form, images: updated });
+  }
+
+  function removeImageUrl(idx: number) {
+    const updated = (form.images ?? []).filter((_, i) => i !== idx);
+    setForm({ ...form, images: updated });
   }
 
   return (
@@ -119,9 +146,10 @@ export default function ProductsPage() {
           {selectedProducts.size > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              disabled={bulkDeleting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors"
             >
-              <Trash2 size={16} /> Excluir selecionados ({selectedProducts.size})
+              <Trash2 size={16} /> {bulkDeleting ? "Excluindo..." : `Excluir selecionados (${selectedProducts.size})`}
             </button>
           )}
           <button
@@ -191,6 +219,7 @@ export default function ProductsPage() {
                         <div className="min-w-0">
                           <p className="font-medium text-gray-800 text-sm truncate max-w-48">{product.name}</p>
                           {product.brand && <p className="text-xs text-gray-500">{product.brand}</p>}
+                          {product.barcode && <p className="text-xs text-gray-400">Cód: {product.barcode}</p>}
                         </div>
                       </div>
                     </td>
@@ -259,15 +288,18 @@ export default function ProductsPage() {
             >
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-lg font-bold text-gray-800">{editProduct ? "Editar Produto" : "Novo Produto"}</h2>
-                <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-800">x</button>
+                <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-800">
+                  <X size={20} />
+                </button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+                {/* Basic fields */}
                 {[
                   { key: "name", label: "Nome", type: "text", required: true },
                   { key: "brand", label: "Marca", type: "text" },
-                  { key: "sku", label: "SKU", type: "text" },
-                  { key: "barcode", label: "Código de Barras", type: "text" },
-                  { key: "imageUrl", label: "URL da Imagem", type: "url", required: true },
+                  { key: "sku", label: "Código de Fabricação", type: "text" },
+                  { key: "barcode", label: "Código de Barras (EAN)", type: "text" },
                   { key: "price", label: "Preco (R$)", type: "number", required: true },
                   { key: "originalPrice", label: "Preco Original (R$)", type: "number" },
                   { key: "stock", label: "Estoque", type: "number", required: true },
@@ -284,6 +316,7 @@ export default function ProductsPage() {
                   </div>
                 ))}
 
+                {/* Categoria */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
                   <select
@@ -299,6 +332,62 @@ export default function ProductsPage() {
                   </select>
                 </div>
 
+                {/* Imagem principal */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">URL da Imagem Principal *</label>
+                  <input
+                    type="url"
+                    value={form.imageUrl}
+                    onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                    required
+                    placeholder="https://..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
+                  />
+                  {form.imageUrl && (
+                    <img src={form.imageUrl} alt="" className="mt-2 h-20 w-20 rounded object-cover border border-gray-200" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  )}
+                </div>
+
+                {/* Galeria de imagens (até 10) */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
+                    <ImagePlus size={13} /> Galeria de Imagens ({(form.images ?? []).length}/10)
+                  </label>
+                  <div className="space-y-2">
+                    {(form.images ?? []).map((url, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={(e) => updateImageUrl(idx, e.target.value)}
+                          placeholder={`URL da imagem ${idx + 1}`}
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
+                        />
+                        {url && (
+                          <img src={url} alt="" className="h-9 w-9 rounded object-cover border border-gray-200 flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeImageUrl(idx)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {(form.images ?? []).length < 10 && (
+                      <button
+                        type="button"
+                        onClick={addImageUrl}
+                        className="flex items-center gap-1.5 text-xs text-[#1B5E20] hover:text-[#2E7D32] font-medium py-1"
+                      >
+                        <Plus size={13} /> Adicionar imagem
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Descricao */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Descricao</label>
                   <textarea

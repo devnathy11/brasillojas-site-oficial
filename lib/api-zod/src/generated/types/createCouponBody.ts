@@ -14,4 +14,5 @@ export interface CreateCouponBody {
   minOrderAmount?: number | null;
   maxUses?: number | null;
   expiresAt?: string | null;
+  isActive?: boolean;
 }

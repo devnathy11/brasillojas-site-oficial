@@ -24,12 +24,13 @@ router.get("/users/profile", async (req, res) => {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     });
-  } catch {
+  } catch (err) {
+    req.log.error({ err }, "GET /users/profile failed");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// PUT /api/users/profile
+// PUT /api/users/profile — upsert (insert or update on id conflict)
 router.put("/users/profile", async (req, res) => {
   const { userId } = getAuth(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -40,32 +41,31 @@ router.put("/users/profile", async (req, res) => {
     const missingFields: string[] = [];
     if (!name) missingFields.push("name");
     if (!email) missingFields.push("email");
-    if (!phone) missingFields.push("phone");
 
     if (missingFields.length > 0) {
       return res.status(422).json({ error: "Campos obrigatórios faltando", fields: missingFields });
     }
 
-    const existing = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
-
-    let user;
-    if (existing) {
-      [user] = await db.update(usersTable).set({
-        name,
-        email,
-        phone,
-        address: address ?? existing.address,
-        updatedAt: new Date(),
-      }).where(eq(usersTable.id, userId)).returning();
-    } else {
-      [user] = await db.insert(usersTable).values({
+    const [user] = await db
+      .insert(usersTable)
+      .values({
         id: userId,
         name,
         email,
-        phone,
-        address: address ?? undefined,
-      }).returning();
-    }
+        phone: phone || null,
+        address: address || null,
+      })
+      .onConflictDoUpdate({
+        target: usersTable.id,
+        set: {
+          name,
+          email,
+          phone: phone || null,
+          address: address || null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
     res.json({
       id: user.id,
@@ -76,7 +76,8 @@ router.put("/users/profile", async (req, res) => {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     });
-  } catch {
+  } catch (err) {
+    req.log.error({ err }, "PUT /users/profile failed");
     res.status(500).json({ error: "Internal server error" });
   }
 });

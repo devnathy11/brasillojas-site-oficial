@@ -18,6 +18,7 @@ export interface CreateProductBody {
   stock: number;
   brand?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   isFeatured?: boolean;
   specifications?: CreateProductBodySpecifications;
 }

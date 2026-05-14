@@ -20,6 +20,7 @@ export interface Product {
   stock: number;
   brand?: string | null;
   sku?: string | null;
+  barcode?: string | null;
   rating: number;
   reviewCount: number;
   isFeatured: boolean;

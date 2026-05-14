@@ -627,6 +627,9 @@ components:
         sku:
           type: string
           nullable: true
+        barcode:
+          type: string
+          nullable: true
         rating:
           type: number
         reviewCount:
@@ -674,6 +677,9 @@ components:
         sku:
           type: string
           nullable: true
+        barcode:
+          type: string
+          nullable: true
         isFeatured:
           type: boolean
         specifications:
@@ -709,6 +715,9 @@ components:
           type: string
           nullable: true
         sku:
+          type: string
+          nullable: true
+        barcode:
           type: string
           nullable: true
         isFeatured:
@@ -849,7 +858,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, confirmed, processing, shipped, delivered, cancelled, criando, processando, saiu_para_entrega, entregue]
+          enum: [pending, confirmed, processing, shipped, delivered, cancelled, cancelado, criando, processando, saiu_para_entrega, entregue]
         items:
           type: array
           items:
@@ -1031,6 +1040,8 @@ components:
         expiresAt:
           type: string
           nullable: true
+        isActive:
+          type: boolean
       required: [code, discountType, discountValue]
 
     UpdateCouponBody:

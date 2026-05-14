@@ -15,6 +15,7 @@ export const OrderStatus = {
   shipped: "shipped",
   delivered: "delivered",
   cancelled: "cancelled",
+  cancelado: "cancelado",
   criando: "criando",
   processando: "processando",
   saiu_para_entrega: "saiu_para_entrega",

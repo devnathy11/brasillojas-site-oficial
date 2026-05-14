@@ -11,10 +11,10 @@ export async function validateProfileComplete(userId: string): Promise<string | 
   const profileRows = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const profile = profileRows[0] ?? null;
 
-  const complete = profile && profile.name && profile.email && profile.phone;
+  const complete = profile && profile.name && profile.email;
 
   if (!complete) {
-    return "Perfil incompleto. Preencha nome, e-mail e telefone antes de finalizar a compra.";
+    return "Perfil incompleto. Preencha seu nome e e-mail antes de finalizar a compra.";
   }
   return null;
 }

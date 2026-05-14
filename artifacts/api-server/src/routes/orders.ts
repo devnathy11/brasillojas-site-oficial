@@ -234,6 +234,62 @@ router.get("/orders/:id", async (req, res) => {
   }
 });
 
+// PUT /api/orders/:id/confirm-payment (admin only — marks order as paid)
+router.put("/orders/:id/confirm-payment", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  if (!(await requireAdmin(req, res, userId))) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid order id" });
+
+    const order = await db.query.ordersTable.findFirst({ where: eq(ordersTable.id, id) });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const [updated] = await db
+      .update(ordersTable)
+      .set({ paymentStatus: "paid", status: order.status === "criando" ? "processando" : order.status, updatedAt: new Date() })
+      .where(eq(ordersTable.id, id))
+      .returning();
+
+    res.json(mapOrder(updated));
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /api/orders/:id/cancel (admin only — cancels the order)
+router.put("/orders/:id/cancel", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  if (!(await requireAdmin(req, res, userId))) return;
+
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid order id" });
+
+    const order = await db.query.ordersTable.findFirst({ where: eq(ordersTable.id, id) });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    if (order.status === "entregue") {
+      return res.status(400).json({ error: "Não é possível cancelar um pedido já entregue" });
+    }
+
+    const [updated] = await db
+      .update(ordersTable)
+      .set({ status: "cancelado", updatedAt: new Date() })
+      .where(eq(ordersTable.id, id))
+      .returning();
+
+    res.json(mapOrder(updated));
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/orders
 router.post("/orders", async (req, res) => {
   const userId = requireAuth(req, res);

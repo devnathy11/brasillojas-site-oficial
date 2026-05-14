@@ -36,6 +36,8 @@ router.get("/cart", async (req, res) => {
       originalPrice: product.originalPrice ? Number(product.originalPrice) : null,
       quantity: cartItem.quantity,
       stock: product.stock,
+      barcode: product.barcode ?? null,
+      sku: product.sku ?? null,
       categorySlug: category?.slug ?? "",
       categoryName: category?.name ?? "",
     }));

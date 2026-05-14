@@ -42,7 +42,7 @@ function getRandomSeller() {
 
 function buildWhatsAppMessage(params: {
   profile: { name: string; email: string; phone?: string | null };
-  items: Array<{ name: string; quantity: number; price: number }>;
+  items: Array<{ name: string; quantity: number; price: number; barcode?: string | null; sku?: string | null }>;
   subtotal: number;
   pixDiscount: number;
   couponDiscount: number;
@@ -63,12 +63,16 @@ function buildWhatsAppMessage(params: {
   const lines: string[] = [
     "🛒 *Novo Pedido — BrasilLojas*",
     "",
-    `*Cliente:* ${profile.name}`,
+    "━━━━━━━━━━━━ CLIENTE ━━━━━━━━━━━━",
+    `*Nome:* ${profile.name}`,
     `*Telefone:* ${profile.phone ?? "não informado"}`,
     `*E-mail:* ${profile.email}`,
     "",
-    "*Itens do Pedido:*",
-    ...items.map((i) => `• ${i.name} (x${i.quantity}) — ${formatBRL(i.price * i.quantity)}`),
+    "━━━━━━━━━━━━ ITENS ━━━━━━━━━━━━",
+    ...items.map((i) => {
+      const barcodeInfo = i.barcode ? `\n   📦 Cód. Barras: ${i.barcode}` : (i.sku ? `\n   🏷️ Cód. Fab.: ${i.sku}` : "");
+      return `• *${i.name}*\n   Qtd: ${i.quantity}x — ${formatBRL(i.price * i.quantity)}${barcodeInfo}`;
+    }),
     "",
     `*Subtotal:* ${formatBRL(subtotal)}`,
   ];
@@ -211,7 +215,7 @@ export default function CheckoutPage() {
           const seller = getRandomSeller();
           const message = buildWhatsAppMessage({
             profile: { name: profile?.name ?? "", email: profile?.email ?? "", phone: profile?.phone },
-            items: items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
+            items: items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, barcode: (i as any).barcode, sku: (i as any).sku })),
             subtotal,
             pixDiscount,
             couponDiscount,
