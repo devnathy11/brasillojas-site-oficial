@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import logoImg from "@/assets/logo.jpg";
 import { ClerkProvider, SignIn, useClerk, useUser } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -83,9 +84,7 @@ function SignInPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-3 rounded-xl bg-[#1B5E20] flex items-center justify-center">
-            <span className="text-white font-bold text-xl">BL</span>
-          </div>
+          <img src={logoImg} alt="BrasilLojas" className="h-16 mx-auto mb-3 rounded-xl object-contain" />
           <h1 className="text-xl font-bold text-gray-800">Painel Admin - BrasilLojas</h1>
         </div>
         <SignIn routing="path" path={`${basePath}/sign-in`} />

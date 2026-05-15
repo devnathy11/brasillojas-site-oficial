@@ -60,15 +60,14 @@ router.get("/orders", async (req, res) => {
 
 async function requireAdmin(req: any, res: any, userId: string): Promise<boolean> {
   try {
-    const user = await clerkClient.users.getUser(userId);
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) return true;
 
+    const user = await clerkClient.users.getUser(userId);
     if (user.publicMetadata?.role === "admin") return true;
 
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
-      const emails = user.emailAddresses.map((e) => e.emailAddress.toLowerCase());
-      if (emails.includes(adminEmail.toLowerCase())) return true;
-    }
+    const emails = user.emailAddresses.map((e) => e.emailAddress.toLowerCase());
+    if (emails.includes(adminEmail.toLowerCase())) return true;
 
     res.status(403).json({ error: "Admin access required" });
     return false;

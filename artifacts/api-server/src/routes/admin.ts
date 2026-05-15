@@ -64,17 +64,6 @@ router.delete("/admin/reset-data", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const user = await clerkClient.users.getUser(userId);
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const isAdmin =
-      user.publicMetadata?.role === "admin" ||
-      (adminEmail &&
-        user.emailAddresses.some(
-          (e) => e.emailAddress.toLowerCase() === adminEmail.toLowerCase()
-        ));
-
-    if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
-
     await db.delete(cartItemsTable);
     await db.delete(ordersTable);
 

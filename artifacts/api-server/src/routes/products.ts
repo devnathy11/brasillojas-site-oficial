@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { productsTable, categoriesTable, reviewsTable } from "@workspace/db";
+import { productsTable, categoriesTable, reviewsTable, cartItemsTable } from "@workspace/db";
 import { eq, like, ilike, desc, asc, and, sql } from "drizzle-orm";
 
 const router = Router();
@@ -212,6 +212,7 @@ router.delete("/products/:id", async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const id = parseInt(req.params.id, 10);
+    await db.delete(cartItemsTable).where(eq(cartItemsTable.productId, id));
     await db.delete(productsTable).where(eq(productsTable.id, id));
     res.json({ success: true });
   } catch (err) {

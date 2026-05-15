@@ -7,13 +7,13 @@ import { eq } from "drizzle-orm";
 const router = Router();
 
 // GET /api/users/profile
-router.get("/users/profile", async (req, res) => {
+router.get("/users/profile", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
     const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
     res.json({
       id: user.id,
@@ -31,9 +31,9 @@ router.get("/users/profile", async (req, res) => {
 });
 
 // PUT /api/users/profile — upsert (insert or update on id conflict)
-router.put("/users/profile", async (req, res) => {
+router.put("/users/profile", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
     const { name, email, phone, address } = req.body;
@@ -43,7 +43,8 @@ router.put("/users/profile", async (req, res) => {
     if (!email) missingFields.push("email");
 
     if (missingFields.length > 0) {
-      return res.status(422).json({ error: "Campos obrigatórios faltando", fields: missingFields });
+      res.status(422).json({ error: "Campos obrigatórios faltando", fields: missingFields });
+      return;
     }
 
     const [user] = await db

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit, Trash2, Search, Package, ImagePlus, X } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Package, ImagePlus, X, Upload } from "lucide-react";
 import {
   useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useListCategories,
   deleteProduct as deleteProductApi,
@@ -8,6 +8,7 @@ import {
 import type { Product, CreateProductBody } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBRL } from "@/lib/utils";
+import { useUpload } from "@workspace/object-storage-web";
 
 type ProductForm = CreateProductBody & { isActive?: boolean };
 
@@ -35,6 +36,13 @@ export default function ProductsPage() {
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [uploadingMain, setUploadingMain] = useState(false);
+  const [uploadingGalleryIdx, setUploadingGalleryIdx] = useState<number | null>(null);
+  const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const galleryImageInputRef = useRef<HTMLInputElement>(null);
+  const pendingGalleryIdxRef = useRef<number | null>(null);
+
+  const { uploadFile } = useUpload();
 
   const { data, isLoading } = useListProducts({ search: search || undefined });
   const { data: categories } = useListCategories();
@@ -120,6 +128,32 @@ export default function ProductsPage() {
       setBulkDeleting(false);
       queryClient.invalidateQueries();
     }
+  }
+
+  async function handleMainImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingMain(true);
+    const result = await uploadFile(file);
+    setUploadingMain(false);
+    if (result) {
+      setForm({ ...form, imageUrl: `/api/storage${result.objectPath}` });
+    }
+    e.target.value = "";
+  }
+
+  async function handleGalleryImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const idx = pendingGalleryIdxRef.current;
+    if (!file || idx === null) return;
+    setUploadingGalleryIdx(idx);
+    const result = await uploadFile(file);
+    setUploadingGalleryIdx(null);
+    if (result) {
+      updateImageUrl(idx, `/api/storage${result.objectPath}`);
+    }
+    e.target.value = "";
+    pendingGalleryIdxRef.current = null;
   }
 
   function addImageUrl() {
@@ -334,15 +368,27 @@ export default function ProductsPage() {
 
                 {/* Imagem principal */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">URL da Imagem Principal *</label>
-                  <input
-                    type="url"
-                    value={form.imageUrl}
-                    onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                    required
-                    placeholder="https://..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
-                  />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Imagem Principal *</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={form.imageUrl}
+                      onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                      required
+                      placeholder="URL da imagem ou faça upload..."
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => mainImageInputRef.current?.click()}
+                      disabled={uploadingMain}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-[#1B5E20] hover:bg-[#2E7D32] text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-60 whitespace-nowrap"
+                    >
+                      <Upload size={13} />
+                      {uploadingMain ? "Enviando..." : "Upload"}
+                    </button>
+                    <input ref={mainImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleMainImageUpload} />
+                  </div>
                   {form.imageUrl && (
                     <img src={form.imageUrl} alt="" className="mt-2 h-20 w-20 rounded object-cover border border-gray-200" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                   )}
@@ -353,16 +399,26 @@ export default function ProductsPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
                     <ImagePlus size={13} /> Galeria de Imagens ({(form.images ?? []).length}/10)
                   </label>
+                  <input ref={galleryImageInputRef} type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
                   <div className="space-y-2">
                     {(form.images ?? []).map((url, idx) => (
                       <div key={idx} className="flex gap-2 items-center">
                         <input
-                          type="url"
+                          type="text"
                           value={url}
                           onChange={(e) => updateImageUrl(idx, e.target.value)}
-                          placeholder={`URL da imagem ${idx + 1}`}
+                          placeholder={`URL da imagem ${idx + 1} ou faça upload`}
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
                         />
+                        <button
+                          type="button"
+                          disabled={uploadingGalleryIdx === idx}
+                          onClick={() => { pendingGalleryIdxRef.current = idx; galleryImageInputRef.current?.click(); }}
+                          className="p-1.5 text-[#1B5E20] hover:bg-green-50 rounded transition-colors flex-shrink-0 disabled:opacity-50"
+                          title="Upload imagem"
+                        >
+                          {uploadingGalleryIdx === idx ? <span className="text-[10px]">...</span> : <Upload size={14} />}
+                        </button>
                         {url && (
                           <img src={url} alt="" className="h-9 w-9 rounded object-cover border border-gray-200 flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         )}

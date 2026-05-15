@@ -126,18 +126,6 @@ export default function ReceiptPage() {
   const { mutate: doConfirmDelivery, isPending: isConfirming } = useConfirmDelivery();
 
   useEffect(() => {
-    if (!order || isLoading) return;
-    const key = "bl_autoprint_order";
-    const pending = sessionStorage.getItem(key);
-    if (pending === String(orderId)) {
-      sessionStorage.removeItem(key);
-      const t = setTimeout(() => window.print(), 700);
-      return () => clearTimeout(t);
-    }
-    return;
-  }, [order, isLoading, orderId]);
-
-  useEffect(() => {
     if (!order || order.paymentMethod !== "pix" || order.paymentStatus === "paid") return;
     const code = `00020126580014BR.GOV.BCB.PIX0130moveis@grupobrasillojas.com0217Pedido ${order.id}5204000053039865406${order.total.toFixed(2)}5802BR5910BRASILLOJAS6007PINHEIR62070503***6304CAFE`;
     QRCode.toDataURL(code, { width: 200, margin: 1 }).then(setPixQrUrl).catch(() => {});
