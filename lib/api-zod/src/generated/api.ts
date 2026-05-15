@@ -870,3 +870,27 @@ export const GetAdminDashboardResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Get the current PIX discount percentage
+ */
+export const GetSettingsPixDiscountResponse = zod.object({
+  percent: zod.number(),
+});
+
+/**
+ * @summary Update the PIX discount percentage (admin only)
+ */
+export const updateSettingsPixDiscountBodyPercentMin = 0;
+export const updateSettingsPixDiscountBodyPercentMax = 100;
+
+export const UpdateSettingsPixDiscountBody = zod.object({
+  percent: zod
+    .number()
+    .min(updateSettingsPixDiscountBodyPercentMin)
+    .max(updateSettingsPixDiscountBodyPercentMax),
+});
+
+export const UpdateSettingsPixDiscountResponse = zod.object({
+  percent: zod.number(),
+});

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
-import { LayoutDashboard, Package, ShoppingBag, Tag, Menu, X, LogOut, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Tag, Settings, Menu, X, LogOut, ChevronRight } from "lucide-react";
 import { Logo } from "./Logo";
 
 const navItems = [
@@ -9,6 +9,7 @@ const navItems = [
   { href: "/products", label: "Produtos", icon: Package },
   { href: "/orders", label: "Pedidos", icon: ShoppingBag },
   { href: "/coupons", label: "Cupons", icon: Tag },
+  { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: typeof LayoutDashboard }) {

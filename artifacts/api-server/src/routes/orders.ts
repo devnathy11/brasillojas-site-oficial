@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { db } from "@workspace/db";
-import { ordersTable, cartItemsTable, productsTable, categoriesTable, couponsTable, usersTable } from "@workspace/db";
+import { ordersTable, cartItemsTable, productsTable, categoriesTable, couponsTable, usersTable, settingsTable } from "@workspace/db";
 import { eq, desc, inArray } from "drizzle-orm";
 import { validateProfileComplete, validateDeliveryMethod } from "../lib/orderValidation";
 
@@ -345,8 +345,10 @@ router.post("/orders", async (req, res) => {
     const method = validMethods.includes(paymentMethod) ? paymentMethod : "pix";
     const paymentStatus = "pending"; // All orders are confirmed via WhatsApp
 
-    // Apply PIX discount on the server side
-    const pixDiscount = method === "pix" ? subtotal * 0.05 : 0;
+    // Apply PIX discount on the server side — read from settings
+    const pixSetting = await db.query.settingsTable.findFirst({ where: eq(settingsTable.key, "pix_discount_percent") });
+    const pixDiscountPercent = pixSetting ? Number(pixSetting.value) / 100 : 0;
+    const pixDiscount = method === "pix" ? subtotal * pixDiscountPercent : 0;
     const total = Math.max(0, subtotal - discount - pixDiscount);
 
     // Fetch customer info to store on the order

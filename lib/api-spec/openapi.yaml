@@ -616,6 +616,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
 
+  /settings/pix-discount:
+    get:
+      operationId: getSettingsPixDiscount
+      tags: [admin]
+      summary: Get the current PIX discount percentage
+      responses:
+        "200":
+          description: PIX discount setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PixDiscountSetting"
+
+  /admin/settings/pix-discount:
+    put:
+      operationId: updateSettingsPixDiscount
+      tags: [admin]
+      summary: Update the PIX discount percentage (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePixDiscountBody"
+      responses:
+        "200":
+          description: Updated PIX discount setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PixDiscountSetting"
+
 components:
   schemas:
     HealthStatus:
@@ -1197,3 +1229,19 @@ components:
       properties:
         error:
           type: string
+
+    PixDiscountSetting:
+      type: object
+      properties:
+        percent:
+          type: number
+      required: [percent]
+
+    UpdatePixDiscountBody:
+      type: object
+      properties:
+        percent:
+          type: number
+          minimum: 0
+          maximum: 100
+      required: [percent]

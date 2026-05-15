@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
-  useGetCart, useCreateOrder, useGetUserProfile, useUpdateUserProfile, useValidateCoupon,
+  useGetCart, useCreateOrder, useGetUserProfile, useUpdateUserProfile, useValidateCoupon, useGetSettingsPixDiscount,
 } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import { Show } from "@clerk/react";
@@ -45,6 +45,7 @@ function buildWhatsAppMessage(params: {
   items: Array<{ name: string; quantity: number; price: number; barcode?: string | null; sku?: string | null }>;
   subtotal: number;
   pixDiscount: number;
+  pixDiscountPercent: number;
   couponDiscount: number;
   total: number;
   paymentMethod: PaymentMethod;
@@ -52,10 +53,10 @@ function buildWhatsAppMessage(params: {
   address: { street: string; number: string; complement?: string; neighborhood: string; city: string; state: string; zipCode: string };
   orderId: number;
 }): string {
-  const { profile, items, subtotal, pixDiscount, couponDiscount, total, paymentMethod, hasDelivery, address, orderId } = params;
+  const { profile, items, subtotal, pixDiscount, pixDiscountPercent, couponDiscount, total, paymentMethod, hasDelivery, address, orderId } = params;
 
   const paymentLabels: Record<PaymentMethod, string> = {
-    pix: "PIX (5% de desconto)",
+    pix: pixDiscountPercent > 0 ? `PIX (${pixDiscountPercent}% de desconto)` : "PIX",
     dinheiro: "Dinheiro (pagamento na entrega/retirada)",
     cartao: "Cartão na loja física (parcela em até 12x)",
   };
@@ -78,7 +79,7 @@ function buildWhatsAppMessage(params: {
   ];
 
   if (couponDiscount > 0) lines.push(`*Desconto Cupom:* -${formatBRL(couponDiscount)}`);
-  if (pixDiscount > 0) lines.push(`*Desconto PIX (5%):* -${formatBRL(pixDiscount)}`);
+  if (pixDiscount > 0) lines.push(`*Desconto PIX (${pixDiscountPercent}%):* -${formatBRL(pixDiscount)}`);
   lines.push(`*Total:* ${formatBRL(total)}`);
   lines.push("", `*Forma de Pagamento:* ${paymentLabels[paymentMethod]}`);
 
@@ -95,11 +96,19 @@ function buildWhatsAppMessage(params: {
   return lines.join("\n");
 }
 
-const PAYMENT_OPTIONS: Array<{ id: PaymentMethod; label: string; sub: string; icon: LucideIcon; badge?: string }> = [
-  { id: "pix", label: "PIX", sub: "5% de desconto no total", icon: QrCode, badge: "5% OFF" },
-  { id: "dinheiro", label: "Dinheiro", sub: "Pague na entrega ou retirada", icon: Banknote },
-  { id: "cartao", label: "Cartão (na loja)", sub: "Parcele em até 12x — passe na loja física", icon: CreditCard },
-];
+function getPaymentOptions(pixPercent: number): Array<{ id: PaymentMethod; label: string; sub: string; icon: LucideIcon; badge?: string }> {
+  return [
+    {
+      id: "pix",
+      label: "PIX",
+      sub: pixPercent > 0 ? `${pixPercent}% de desconto no total` : "Pagamento instantâneo",
+      icon: QrCode,
+      badge: pixPercent > 0 ? `${pixPercent}% OFF` : undefined,
+    },
+    { id: "dinheiro", label: "Dinheiro", sub: "Pague na entrega ou retirada", icon: Banknote },
+    { id: "cartao", label: "Cartão (na loja)", sub: "Parcele em até 12x — passe na loja física", icon: CreditCard },
+  ];
+}
 
 const STEP_LABELS: Record<Step, string> = {
   address: "Endereço",
@@ -148,6 +157,8 @@ export default function CheckoutPage() {
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } as any });
   const { data: profile } = useGetUserProfile({ query: { retry: false } as any });
+  const { data: pixSetting } = useGetSettingsPixDiscount();
+  const pixDiscountPercent = pixSetting?.percent ?? 0;
   const createOrder = useCreateOrder();
   const updateProfile = useUpdateUserProfile();
   const { data: couponData } = useValidateCoupon(
@@ -183,7 +194,7 @@ export default function CheckoutPage() {
       ? subtotal * (Number(couponData.coupon.discountValue) / 100)
       : Number(couponData.coupon.discountValue)
     : 0;
-  const pixDiscount = paymentMethod === "pix" ? subtotal * 0.05 : 0;
+  const pixDiscount = paymentMethod === "pix" ? subtotal * (pixDiscountPercent / 100) : 0;
   const total = Math.max(0, subtotal - couponDiscount - pixDiscount);
 
   function applyCoupon() {
@@ -218,6 +229,7 @@ export default function CheckoutPage() {
             items: items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, barcode: (i as any).barcode, sku: (i as any).sku })),
             subtotal,
             pixDiscount,
+            pixDiscountPercent,
             couponDiscount,
             total,
             paymentMethod,
@@ -349,7 +361,7 @@ export default function CheckoutPage() {
                       <CreditCard size={18} className="text-[#1B5E20]" /> Forma de Pagamento
                     </h2>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      {PAYMENT_OPTIONS.map((opt) => {
+                      {getPaymentOptions(pixDiscountPercent).map((opt) => {
                         const Icon = opt.icon;
                         return (
                           <button
@@ -383,7 +395,7 @@ export default function CheckoutPage() {
 
                     {paymentMethod === "pix" && (
                       <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                        <p className="font-semibold mb-1">⚡ Pagamento via PIX — 5% OFF</p>
+                        <p className="font-semibold mb-1">{pixDiscountPercent > 0 ? `⚡ Pagamento via PIX — ${pixDiscountPercent}% OFF` : "⚡ Pagamento via PIX"}</p>
                         <p className="text-xs">Após confirmar, você receberá a chave PIX via WhatsApp. Pague e aguarde a confirmação do vendedor.</p>
                       </div>
                     )}
@@ -474,7 +486,7 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2">
                       <CreditCard size={16} className="text-[#1B5E20]" />
                       <span className="text-sm text-gray-600 font-medium">
-                        {PAYMENT_OPTIONS.find((o) => o.id === paymentMethod)?.label ?? paymentMethod}
+                        {getPaymentOptions(pixDiscountPercent).find((o) => o.id === paymentMethod)?.label ?? paymentMethod}
                       </span>
                     </div>
                     <button onClick={() => setStep("payment")} className="text-xs text-[#1B5E20] hover:underline">Alterar</button>
@@ -556,7 +568,7 @@ export default function CheckoutPage() {
                 )}
                 {pixDiscount > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>Desconto PIX (5%)</span>
+                    <span>Desconto PIX ({pixDiscountPercent}%)</span>
                     <span>-{formatBRL(pixDiscount)}</span>
                   </div>
                 )}

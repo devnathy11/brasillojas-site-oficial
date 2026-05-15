@@ -395,6 +395,18 @@ export interface ErrorEnvelope {
   error: string;
 }
 
+export interface PixDiscountSetting {
+  percent: number;
+}
+
+export interface UpdatePixDiscountBody {
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  percent: number;
+}
+
 export type ListProductsParams = {
   category?: string;
   search?: string;

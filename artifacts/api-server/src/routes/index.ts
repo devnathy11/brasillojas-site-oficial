@@ -9,6 +9,7 @@ import couponsRouter from "./coupons";
 import usersRouter from "./users";
 import adminRouter from "./admin";
 import storageRouter from "./storage";
+import settingsRouter from "./settings";
 
 import supportRouter from "./support";
 
@@ -24,6 +25,7 @@ router.use(couponsRouter);
 router.use(usersRouter);
 router.use(adminRouter);
 router.use(storageRouter);
+router.use(settingsRouter);
 
 router.use(supportRouter);
 

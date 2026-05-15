@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ShoppingCart, Star, ChevronLeft, ChevronRight, Heart, Share2, Minus, Plus, Zap } from "lucide-react";
-import { useGetProduct, useListProductReviews, useAddToCart, useCreateReview } from "@workspace/api-client-react";
+import { useGetProduct, useListProductReviews, useAddToCart, useCreateReview, useGetSettingsPixDiscount } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import { useUser, Show } from "@clerk/react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,8 @@ export default function ProductDetailPage() {
 
   const { data: product, isLoading } = useGetProduct(productId, { query: { enabled: !!productId } as any });
   const { data: reviews } = useListProductReviews(productId, { query: { enabled: !!productId } as any });
+  const { data: pixSetting } = useGetSettingsPixDiscount();
+  const pixDiscountPercent = pixSetting?.percent ?? 0;
   const addToCart = useAddToCart();
   const createReview = useCreateReview();
   const { user } = useUser();
@@ -238,9 +240,11 @@ export default function ProductDetailPage() {
               <p className="text-sm text-gray-500 mt-1">
                 ou 12x de {formatBRL(Number(product.price) / 12)} sem juros
               </p>
-              <p className="text-sm text-green-700 font-medium mt-2">
-                5% de desconto no Pix
-              </p>
+              {pixDiscountPercent > 0 && (
+                <p className="text-sm text-green-700 font-medium mt-2">
+                  {pixDiscountPercent}% de desconto no Pix
+                </p>
+              )}
             </div>
 
             {/* Stock */}

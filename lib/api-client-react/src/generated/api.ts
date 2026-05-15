@@ -33,11 +33,13 @@ import type {
   ListProducts200,
   ListProductsParams,
   Order,
+  PixDiscountSetting,
   Product,
   ProductStats,
   Review,
   UpdateCartItemBody,
   UpdateCouponBody,
+  UpdatePixDiscountBody,
   UpdateProductBody,
   UpdateUserProfileBody,
   UploadUrlRequest,
@@ -2679,3 +2681,166 @@ export function useGetAdminDashboard<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get the current PIX discount percentage
+ */
+export const getGetSettingsPixDiscountUrl = () => {
+  return `/api/settings/pix-discount`;
+};
+
+export const getSettingsPixDiscount = async (
+  options?: RequestInit,
+): Promise<PixDiscountSetting> => {
+  return customFetch<PixDiscountSetting>(getGetSettingsPixDiscountUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSettingsPixDiscountQueryKey = () => {
+  return [`/api/settings/pix-discount`] as const;
+};
+
+export const getGetSettingsPixDiscountQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSettingsPixDiscount>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSettingsPixDiscount>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSettingsPixDiscountQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSettingsPixDiscount>>
+  > = ({ signal }) => getSettingsPixDiscount({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSettingsPixDiscount>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSettingsPixDiscountQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSettingsPixDiscount>>
+>;
+export type GetSettingsPixDiscountQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current PIX discount percentage
+ */
+
+export function useGetSettingsPixDiscount<
+  TData = Awaited<ReturnType<typeof getSettingsPixDiscount>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSettingsPixDiscount>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSettingsPixDiscountQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update the PIX discount percentage (admin only)
+ */
+export const getUpdateSettingsPixDiscountUrl = () => {
+  return `/api/admin/settings/pix-discount`;
+};
+
+export const updateSettingsPixDiscount = async (
+  updatePixDiscountBody: UpdatePixDiscountBody,
+  options?: RequestInit,
+): Promise<PixDiscountSetting> => {
+  return customFetch<PixDiscountSetting>(getUpdateSettingsPixDiscountUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePixDiscountBody),
+  });
+};
+
+export const getUpdateSettingsPixDiscountMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSettingsPixDiscount>>,
+    TError,
+    { data: BodyType<UpdatePixDiscountBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSettingsPixDiscount>>,
+  TError,
+  { data: BodyType<UpdatePixDiscountBody> },
+  TContext
+> => {
+  const mutationKey = ["updateSettingsPixDiscount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSettingsPixDiscount>>,
+    { data: BodyType<UpdatePixDiscountBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateSettingsPixDiscount(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSettingsPixDiscountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSettingsPixDiscount>>
+>;
+export type UpdateSettingsPixDiscountMutationBody =
+  BodyType<UpdatePixDiscountBody>;
+export type UpdateSettingsPixDiscountMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update the PIX discount percentage (admin only)
+ */
+export const useUpdateSettingsPixDiscount = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSettingsPixDiscount>>,
+    TError,
+    { data: BodyType<UpdatePixDiscountBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateSettingsPixDiscount>>,
+  TError,
+  { data: BodyType<UpdatePixDiscountBody> },
+  TContext
+> => {
+  return useMutation(getUpdateSettingsPixDiscountMutationOptions(options));
+};

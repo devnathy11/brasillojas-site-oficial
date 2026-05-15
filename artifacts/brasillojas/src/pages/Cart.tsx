@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Minus, Plus, Tag, ShoppingBag, ArrowRight, AlertCircle, Truck, Store } from "lucide-react";
-import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useGetUserProfile } from "@workspace/api-client-react";
+import { useGetCart, useUpdateCartItem, useRemoveFromCart, useValidateCoupon, useGetUserProfile, useGetSettingsPixDiscount } from "@workspace/api-client-react";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
 import type { UserProfile } from "@workspace/api-client-react";
 import { Show } from "@clerk/react";
@@ -21,9 +21,12 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [couponError, setCouponError] = useState("");
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [pendingItems, setPendingItems] = useState<Set<number>>(new Set());
 
   const { data: cart, isLoading } = useGetCart({ query: { retry: false } as any });
   const { data: profile } = useGetUserProfile({ query: { retry: false } as any });
+  const { data: pixSetting } = useGetSettingsPixDiscount();
+  const pixDiscountPercent = pixSetting?.percent ?? 0;
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveFromCart();
   const queryClient = useQueryClient();
@@ -46,15 +49,25 @@ export default function CartPage() {
   }
 
   function handleQtyChange(productId: number, qty: number) {
+    setPendingItems((prev) => new Set(prev).add(productId));
+    const done = () => {
+      setPendingItems((prev) => { const next = new Set(prev); next.delete(productId); return next; });
+      queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    };
     if (qty < 1) {
-      removeItem.mutate({ productId }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }) });
+      removeItem.mutate({ productId }, { onSuccess: done, onError: done });
     } else {
-      updateItem.mutate({ productId, data: { quantity: qty } }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }) });
+      updateItem.mutate({ productId, data: { quantity: qty } }, { onSuccess: done, onError: done });
     }
   }
 
   function handleRemove(productId: number) {
-    removeItem.mutate({ productId }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }) });
+    setPendingItems((prev) => new Set(prev).add(productId));
+    const done = () => {
+      setPendingItems((prev) => { const next = new Set(prev); next.delete(productId); return next; });
+      queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    };
+    removeItem.mutate({ productId }, { onSuccess: done, onError: done });
   }
 
   function toggleSelectItem(productId: number) {
@@ -190,12 +203,12 @@ export default function CartPage() {
                           </Link>
                           <p className="text-base font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
                           <div className="flex items-center gap-3 mt-2">
-                            <div className="flex items-center border border-gray-300 rounded overflow-hidden">
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100"><Minus size={13} /></button>
+                            <div className={`flex items-center border rounded overflow-hidden transition-opacity ${pendingItems.has(item.productId) ? "border-gray-200 opacity-60" : "border-gray-300"}`}>
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} disabled={pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:cursor-not-allowed"><Minus size={13} /></button>
                               <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={13} /></button>
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock || pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={13} /></button>
                             </div>
-                            <button onClick={() => handleRemove(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs"><Trash2 size={14} /></button>
+                            <button onClick={() => handleRemove(item.productId)} disabled={pendingItems.has(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 size={14} /></button>
                             <p className="ml-auto font-bold text-gray-800 text-sm">{formatBRL(item.price * item.quantity)}</p>
                           </div>
                         </div>
@@ -236,12 +249,12 @@ export default function CartPage() {
                           </Link>
                           <p className="text-base font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
                           <div className="flex items-center gap-3 mt-2">
-                            <div className="flex items-center border border-gray-300 rounded overflow-hidden">
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100"><Minus size={13} /></button>
+                            <div className={`flex items-center border rounded overflow-hidden transition-opacity ${pendingItems.has(item.productId) ? "border-gray-200 opacity-60" : "border-gray-300"}`}>
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} disabled={pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:cursor-not-allowed"><Minus size={13} /></button>
                               <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40"><Plus size={13} /></button>
+                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock || pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={13} /></button>
                             </div>
-                            <button onClick={() => handleRemove(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs"><Trash2 size={14} /></button>
+                            <button onClick={() => handleRemove(item.productId)} disabled={pendingItems.has(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 size={14} /></button>
                             <p className="ml-auto font-bold text-gray-800 text-sm">{formatBRL(item.price * item.quantity)}</p>
                           </div>
                         </div>
@@ -280,7 +293,9 @@ export default function CartPage() {
                   <div className="flex justify-between text-gray-600"><span>Frete</span><span className="text-green-600 font-medium">Grátis</span></div>
                   <hr className="border-gray-200 my-2" />
                   <div className="flex justify-between text-base font-bold text-gray-800"><span>Total estimado</span><span className="text-[#C62828] text-lg">{formatBRL(total)}</span></div>
-                  <p className="text-[11px] text-gray-400">Desconto PIX de 5% aplicado no checkout</p>
+                  {pixDiscountPercent > 0 && (
+                    <p className="text-[11px] text-gray-400">Desconto PIX de {pixDiscountPercent}% aplicado no checkout</p>
+                  )}
                 </div>
 
                 <Show when="signed-in">
