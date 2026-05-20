@@ -126,7 +126,7 @@ export default function ReceiptPage() {
   const { mutate: doConfirmDelivery, isPending: isConfirming } = useConfirmDelivery();
 
   useEffect(() => {
-    if (!order || order.paymentMethod !== "pix" || order.paymentStatus === "paid") return;
+    if (!order || order.paymentMethod !== "pix" || order.paymentStatus   === "paid") return;
     const code = `00020126580014BR.GOV.BCB.PIX0130moveis@grupobrasillojas.com0217Pedido ${order.id}5204000053039865406${order.total.toFixed(2)}5802BR5910BRASILLOJAS6007PINHEIR62070503***6304CAFE`;
     QRCode.toDataURL(code, { width: 200, margin: 1 }).then(setPixQrUrl).catch(() => {});
   }, [order]);
