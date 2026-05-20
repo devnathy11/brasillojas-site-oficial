@@ -141,7 +141,7 @@ export default function CartPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-8 sm:p-16 text-center">
             <ShoppingBag size={56} className="mx-auto text-gray-300 mb-4" />
             <h2 className="text-xl font-bold text-gray-700 mb-2">Seu carrinho está vazio</h2>
-            <p className="text-gray-500 mb-6">Adicione produtos para continuar comprando</p>
+            <p className="text-gray-500 mb-6">Adicione produtos para continuing comprando</p>
             <Link href="/products" className="inline-flex items-center gap-2 bg-[#1B5E20] hover:bg-[#2E7D32] text-white font-bold px-8 py-3 rounded-md transition-colors">
               Explorar Produtos <ArrowRight size={16} />
             </Link>
@@ -203,11 +203,21 @@ export default function CartPage() {
                           </Link>
                           <p className="text-base font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
                           <div className="flex items-center gap-3 mt-2">
-                            <div className={`flex items-center border rounded overflow-hidden transition-opacity ${pendingItems.has(item.productId) ? "border-gray-200 opacity-60" : "border-gray-300"}`}>
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} disabled={pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:cursor-not-allowed"><Minus size={13} /></button>
-                              <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock || pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={13} /></button>
+                            {/* Wrapper dos botões + Contador dinâmico */}
+                            <div className="flex flex-col items-start gap-1">
+                              <div className={`flex items-center border rounded overflow-hidden transition-opacity ${pendingItems.has(item.productId) ? "border-gray-200 opacity-60" : "border-gray-300"}`}>
+                                <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} disabled={pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:cursor-not-allowed"><Minus size={13} /></button>
+                                <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+                                <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock || pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={13} /></button>
+                              </div>
+
+                              {/* Estoque Vivo Inline */}
+                              <div className="text-[11px] font-medium text-amber-600">
+                                <span className="block sm:hidden">{item.stock} disponível{item.stock > 1 ? 's' : ''}</span>
+                                <span className="hidden sm:block">{item.stock < 5 && `${item.stock} disponível${item.stock > 1 ? 's' : ''}`}</span>
+                              </div>
                             </div>
+
                             <button onClick={() => handleRemove(item.productId)} disabled={pendingItems.has(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 size={14} /></button>
                             <p className="ml-auto font-bold text-gray-800 text-sm">{formatBRL(item.price * item.quantity)}</p>
                           </div>
@@ -249,11 +259,21 @@ export default function CartPage() {
                           </Link>
                           <p className="text-base font-bold text-[#C62828] mt-1">{formatBRL(item.price)}</p>
                           <div className="flex items-center gap-3 mt-2">
-                            <div className={`flex items-center border rounded overflow-hidden transition-opacity ${pendingItems.has(item.productId) ? "border-gray-200 opacity-60" : "border-gray-300"}`}>
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} disabled={pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:cursor-not-allowed"><Minus size={13} /></button>
-                              <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                              <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock || pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={13} /></button>
+                            {/* Wrapper dos botões + Contador dinâmico */}
+                            <div className="flex flex-col items-start gap-1">
+                              <div className={`flex items-center border rounded overflow-hidden transition-opacity ${pendingItems.has(item.productId) ? "border-gray-200 opacity-60" : "border-gray-300"}`}>
+                                <button onClick={() => handleQtyChange(item.productId, item.quantity - 1)} disabled={pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:cursor-not-allowed"><Minus size={13} /></button>
+                                <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+                                <button onClick={() => handleQtyChange(item.productId, item.quantity + 1)} disabled={item.quantity >= item.stock || pendingItems.has(item.productId)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={13} /></button>
+                              </div>
+
+                              {/* Estoque Vivo Inline */}
+                              <div className="text-[11px] font-medium text-amber-600">
+                                <span className="block sm:hidden">{item.stock} disponível{item.stock > 1 ? 's' : ''}</span>
+                                <span className="hidden sm:block">{item.stock < 5 && `${item.stock} disponível${item.stock > 1 ? 's' : ''}`}</span>
+                              </div>
                             </div>
+
                             <button onClick={() => handleRemove(item.productId)} disabled={pendingItems.has(item.productId)} className="text-red-400 hover:text-red-600 p-1 flex items-center gap-1 text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 size={14} /></button>
                             <p className="ml-auto font-bold text-gray-800 text-sm">{formatBRL(item.price * item.quantity)}</p>
                           </div>
