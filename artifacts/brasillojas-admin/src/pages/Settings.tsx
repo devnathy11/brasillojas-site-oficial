@@ -1,29 +1,34 @@
 import { useState, useEffect } from "react";
 import { Settings, Save, CheckCircle } from "lucide-react";
-import { useGetSettingsPixDiscount, useUpdateSettingsPixDiscount } from "@workspace/api-client-react";
+import {
+  useGetSettingsPixDiscount,
+  useUpdateSettingsPixDiscount,
+} from "@workspace/api-client-react";
 
 export default function SettingsPage() {
   const { data, isLoading } = useGetSettingsPixDiscount();
   const updateMutation = useUpdateSettingsPixDiscount();
 
-  const [pixPercent, setPixPercent] = useState<number>(5);
+  const [pixPercent, setPixPercent] = useState<number>(0);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (data?.percent !== undefined) {
+    if (data && typeof data.percent === "number") {
       setPixPercent(data.percent);
     }
-  }, [data?.percent]);
+  }, [data]);
 
   function handleSave() {
+    const percentToSend = Number(pixPercent);
+
     updateMutation.mutate(
-      { data: { percent: pixPercent } },
+      { data: { percent: isNaN(percentToSend) ? 0 : percentToSend } },
       {
         onSuccess: () => {
           setSaved(true);
           setTimeout(() => setSaved(false), 3000);
         },
-      }
+      },
     );
   }
 
@@ -37,7 +42,8 @@ export default function SettingsPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-1">Desconto PIX</h2>
         <p className="text-sm text-gray-500 mb-6">
-          Percentual de desconto oferecido aos clientes que pagam via PIX. Defina 0% para desabilitar o desconto PIX.
+          Percentual de desconto oferecido aos clientes que pagam via PIX.
+          Defina 0% para desabilitar o desconto PIX.
         </p>
 
         {isLoading ? (
@@ -57,7 +63,9 @@ export default function SettingsPage() {
                 }}
                 className="w-32 border border-gray-300 rounded-lg px-4 py-2.5 text-lg font-semibold text-gray-800 outline-none focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20]/20 pr-8"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                %
+              </span>
             </div>
 
             <button
