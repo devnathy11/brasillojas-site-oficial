@@ -36,30 +36,28 @@ router.get("/settings/pix-discount", async (req: Request, res: Response) => {
   }
 });
 
+// Mirror the same pattern as orders.ts requireAdmin:
+// if ADMIN_EMAIL is not set, any authenticated user is treated as admin (fail-open).
+// if ADMIN_EMAIL is set, only that email or Clerk-role=admin may proceed.
 async function requireAdmin(
   req: any,
   res: any,
   userId: string,
 ): Promise<boolean> {
   try {
-    const user = await clerkClient.users.getUser(userId);
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) return true;
 
-    // Always allow Clerk-role admins
+    const user = await clerkClient.users.getUser(userId);
     if (user.publicMetadata?.role === "admin") return true;
 
-    // Allow email-based admin if ADMIN_EMAIL is configured
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
-      const emails = user.emailAddresses.map((e) =>
-        e.emailAddress.toLowerCase(),
-      );
-      if (emails.includes(adminEmail.toLowerCase())) return true;
-      res.status(403).json({ error: "Admin access required" });
-      return false;
-    }
+    const emails = user.emailAddresses.map((e) =>
+      e.emailAddress.toLowerCase(),
+    );
+    if (emails.includes(adminEmail.toLowerCase())) return true;
 
-    // If ADMIN_EMAIL is not configured, allow any authenticated user
-    return true;
+    res.status(403).json({ error: "Admin access required" });
+    return false;
   } catch {
     res.status(500).json({ error: "Admin authorization check failed" });
     return false;

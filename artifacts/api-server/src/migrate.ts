@@ -47,7 +47,11 @@ export async function runMigrations() {
       ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email text;
     `);
 
-    logger.info("DB migrations applied (barcode, recovery_email, orders.status default+constraint, shipping_address nullable, customer_name, customer_email)");
+    await db.execute(sql`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS max_installments integer NOT NULL DEFAULT 1;
+    `);
+
+    logger.info("DB migrations applied (barcode, recovery_email, orders.status default+constraint, shipping_address nullable, customer_name, customer_email, products.max_installments)");
   } catch (err) {
     logger.error({ err }, "Error applying DB migrations");
     throw err;

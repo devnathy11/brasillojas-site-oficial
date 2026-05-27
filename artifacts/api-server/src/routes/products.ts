@@ -40,7 +40,10 @@ router.get("/products", async (req, res) => {
     const limitNum = Math.min(100, parseInt(limit as string, 10) || 24);
     const offset = (pageNum - 1) * limitNum;
 
-    const showAll = req.query.showAll === "true";
+    // showAll=true bypasses the isActive filter — only allowed for authenticated users (admin panel)
+    const { getAuth } = await import("@clerk/express");
+    const { userId } = getAuth(req);
+    const showAll = req.query.showAll === "true" && !!userId;
     const conditions = showAll ? [] : [eq(productsTable.isActive, true)];
 
     if (search) {
