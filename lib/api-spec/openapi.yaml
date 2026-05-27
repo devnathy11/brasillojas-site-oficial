@@ -700,6 +700,8 @@ components:
           type: boolean
         isActive:
           type: boolean
+        maxInstallments:
+          type: integer
         specifications:
           type: object
           nullable: true
@@ -709,7 +711,7 @@ components:
           type: string
         updatedAt:
           type: string
-      required: [id, name, description, price, imageUrl, images, categoryId, categoryName, stock, rating, reviewCount, isFeatured, isActive, createdAt, updatedAt]
+      required: [id, name, description, price, imageUrl, images, categoryId, categoryName, stock, rating, reviewCount, isFeatured, isActive, maxInstallments, createdAt, updatedAt]
 
     CreateProductBody:
       type: object
@@ -744,6 +746,8 @@ components:
           nullable: true
         isFeatured:
           type: boolean
+        maxInstallments:
+          type: integer
         specifications:
           type: object
           nullable: true
@@ -786,6 +790,8 @@ components:
           type: boolean
         isActive:
           type: boolean
+        maxInstallments:
+          type: integer
         specifications:
           type: object
           nullable: true

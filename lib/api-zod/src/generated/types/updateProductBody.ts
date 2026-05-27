@@ -21,5 +21,6 @@ export interface UpdateProductBody {
   barcode?: string | null;
   isFeatured?: boolean;
   isActive?: boolean;
+  maxInstallments?: number;
   specifications?: UpdateProductBodySpecifications;
 }

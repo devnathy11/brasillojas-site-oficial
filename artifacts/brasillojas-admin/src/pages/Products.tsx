@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatBRL } from "@/lib/utils";
 import { useUpload } from "@workspace/object-storage-web";
 
-type ProductForm = CreateProductBody & { isActive?: boolean };
+type ProductForm = CreateProductBody & { isActive?: boolean; maxInstallments?: number };
 
 const emptyForm: ProductForm = {
   name: "",
@@ -26,6 +26,7 @@ const emptyForm: ProductForm = {
   barcode: undefined,
   isFeatured: false,
   isActive: true,
+  maxInstallments: 1,
   specifications: undefined,
 };
 
@@ -44,7 +45,7 @@ export default function ProductsPage() {
 
   const { uploadFile } = useUpload();
 
-  const { data, isLoading } = useListProducts({ search: search || undefined });
+  const { data, isLoading } = useListProducts({ search: search || undefined, showAll: true } as any);
   const { data: categories } = useListCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -75,6 +76,7 @@ export default function ProductsPage() {
       barcode: product.barcode ?? undefined,
       isFeatured: product.isFeatured,
       isActive: product.isActive,
+      maxInstallments: product.maxInstallments ?? 1,
       specifications: product.specifications ?? undefined,
     });
     setShowForm(true);
@@ -450,9 +452,26 @@ export default function ProductsPage() {
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     required
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20] resize-none"
+                    rows={4}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
                   />
+                  <p className="text-xs text-gray-400 mt-1">Quebras de linha e espaços serão preservados no site.</p>
+                </div>
+
+                {/* Parcelamento */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Máximo de Parcelas</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={form.maxInstallments ?? 1}
+                      onChange={(e) => setForm({ ...form, maxInstallments: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                      className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
+                    />
+                    <span className="text-sm text-gray-500">vezes (sem juros no cartão)</span>
+                  </div>
                 </div>
 
                 <div className="flex gap-4">

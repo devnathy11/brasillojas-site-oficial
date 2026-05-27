@@ -25,6 +25,7 @@ export interface Product {
   reviewCount: number;
   isFeatured: boolean;
   isActive: boolean;
+  maxInstallments: number;
   specifications?: ProductSpecifications;
   createdAt: string;
   updatedAt: string;

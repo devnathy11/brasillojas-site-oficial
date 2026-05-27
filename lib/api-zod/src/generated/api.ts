@@ -76,6 +76,7 @@ export const ListProductsResponse = zod.object({
       reviewCount: zod.number(),
       isFeatured: zod.boolean(),
       isActive: zod.boolean(),
+      maxInstallments: zod.number(),
       specifications: zod.record(zod.string(), zod.string()).nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
@@ -102,6 +103,7 @@ export const CreateProductBody = zod.object({
   sku: zod.string().nullish(),
   barcode: zod.string().nullish(),
   isFeatured: zod.boolean().optional(),
+  maxInstallments: zod.number().optional(),
   specifications: zod.record(zod.string(), zod.string()).nullish(),
 });
 
@@ -126,6 +128,7 @@ export const GetFeaturedProductsResponseItem = zod.object({
   reviewCount: zod.number(),
   isFeatured: zod.boolean(),
   isActive: zod.boolean(),
+  maxInstallments: zod.number(),
   specifications: zod.record(zod.string(), zod.string()).nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -171,6 +174,7 @@ export const GetProductResponse = zod.object({
   reviewCount: zod.number(),
   isFeatured: zod.boolean(),
   isActive: zod.boolean(),
+  maxInstallments: zod.number(),
   specifications: zod.record(zod.string(), zod.string()).nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
@@ -197,6 +201,7 @@ export const UpdateProductBody = zod.object({
   barcode: zod.string().nullish(),
   isFeatured: zod.boolean().optional(),
   isActive: zod.boolean().optional(),
+  maxInstallments: zod.number().optional(),
   specifications: zod.record(zod.string(), zod.string()).nullish(),
 });
 
@@ -218,6 +223,7 @@ export const UpdateProductResponse = zod.object({
   reviewCount: zod.number(),
   isFeatured: zod.boolean(),
   isActive: zod.boolean(),
+  maxInstallments: zod.number(),
   specifications: zod.record(zod.string(), zod.string()).nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),

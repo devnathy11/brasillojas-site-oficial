@@ -23,6 +23,7 @@ function mapProduct(p: typeof productsTable.$inferSelect, category?: typeof cate
     barcode: p.barcode ?? null,
     isFeatured: p.isFeatured,
     isActive: p.isActive,
+    maxInstallments: p.maxInstallments ?? 1,
     specifications: p.specifications ?? null,
     rating: avgRating ?? 0,
     reviewCount: reviewCount ?? 0,
@@ -39,7 +40,8 @@ router.get("/products", async (req, res) => {
     const limitNum = Math.min(100, parseInt(limit as string, 10) || 24);
     const offset = (pageNum - 1) * limitNum;
 
-    const conditions = [eq(productsTable.isActive, true)];
+    const showAll = req.query.showAll === "true";
+    const conditions = showAll ? [] : [eq(productsTable.isActive, true)];
 
     if (search) {
       conditions.push(ilike(productsTable.name, `%${search}%`));
@@ -169,6 +171,7 @@ router.post("/products", async (req, res) => {
       barcode: req.body.barcode ?? null,
       isFeatured: req.body.isFeatured ?? false,
       isActive: req.body.isActive ?? true,
+      maxInstallments: req.body.maxInstallments ?? 1,
       specifications: req.body.specifications ?? null,
     }).returning();
 
@@ -188,7 +191,7 @@ router.put("/products/:id", async (req, res) => {
 
     const id = parseInt(req.params.id, 10);
     const updates: Record<string, unknown> = {};
-    const allowed = ["name", "description", "price", "originalPrice", "imageUrl", "images", "categoryId", "stock", "brand", "sku", "barcode", "isFeatured", "isActive", "specifications"];
+    const allowed = ["name", "description", "price", "originalPrice", "imageUrl", "images", "categoryId", "stock", "brand", "sku", "barcode", "isFeatured", "isActive", "maxInstallments", "specifications"];
     for (const key of allowed) {
       if (key in req.body) updates[key] = req.body[key];
     }

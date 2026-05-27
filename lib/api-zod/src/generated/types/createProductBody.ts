@@ -20,5 +20,6 @@ export interface CreateProductBody {
   sku?: string | null;
   barcode?: string | null;
   isFeatured?: boolean;
+  maxInstallments?: number;
   specifications?: CreateProductBodySpecifications;
 }

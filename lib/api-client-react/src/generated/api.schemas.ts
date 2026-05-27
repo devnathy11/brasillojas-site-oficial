@@ -29,6 +29,7 @@ export interface Product {
   reviewCount: number;
   isFeatured: boolean;
   isActive: boolean;
+  maxInstallments: number;
   specifications?: ProductSpecifications;
   createdAt: string;
   updatedAt: string;
@@ -49,6 +50,7 @@ export interface CreateProductBody {
   sku?: string | null;
   barcode?: string | null;
   isFeatured?: boolean;
+  maxInstallments?: number;
   specifications?: CreateProductBodySpecifications;
 }
 
@@ -68,6 +70,7 @@ export interface UpdateProductBody {
   barcode?: string | null;
   isFeatured?: boolean;
   isActive?: boolean;
+  maxInstallments?: number;
   specifications?: UpdateProductBodySpecifications;
 }
 

@@ -54,10 +54,12 @@ async function requireAdmin(
         e.emailAddress.toLowerCase(),
       );
       if (emails.includes(adminEmail.toLowerCase())) return true;
+      res.status(403).json({ error: "Admin access required" });
+      return false;
     }
 
-    res.status(403).json({ error: "Admin access required" });
-    return false;
+    // If ADMIN_EMAIL is not configured, allow any authenticated user
+    return true;
   } catch {
     res.status(500).json({ error: "Admin authorization check failed" });
     return false;

@@ -25,6 +25,7 @@ export const productsTable = pgTable("products", {
   barcode: text("barcode"),
   isFeatured: boolean("is_featured").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  maxInstallments: integer("max_installments").default(1).notNull(),
   specifications: jsonb("specifications").$type<Record<string, string>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -237,9 +237,11 @@ export default function ProductDetailPage() {
                 </div>
               )}
               <p className="text-3xl font-extrabold text-[#C62828]">{formatBRL(product.price)}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                ou 12x de {formatBRL(Number(product.price) / 12)} sem juros
-              </p>
+              {(product.maxInstallments ?? 1) > 1 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  ou {product.maxInstallments}x de {formatBRL(Number(product.price) / (product.maxInstallments ?? 1))} sem juros
+                </p>
+              )}
               {pixDiscountPercent > 0 && (
                 <p className="text-sm text-green-700 font-medium mt-2">
                   {pixDiscountPercent}% de desconto no Pix
@@ -297,7 +299,7 @@ export default function ProductDetailPage() {
             {/* Description */}
             <div className="mb-4">
               <h3 className="font-bold text-gray-800 mb-2">Descrição</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{product.description}</p>
             </div>
 
             {/* Specs */}
