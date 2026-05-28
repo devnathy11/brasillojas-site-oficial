@@ -1,19 +1,41 @@
 import { Router } from "express";
-import { getAuth } from "@clerk/express";
+import { getAuth, clerkClient } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const router = Router();
 
-// GET /api/users/profile
+async function upsertUserFromClerk(userId: string) {
+  const clerkUser = await clerkClient.users.getUser(userId);
+  const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || "Usuário";
+  const email = clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress
+    ?? clerkUser.emailAddresses[0]?.emailAddress
+    ?? "";
+  const phone = clerkUser.phoneNumbers.find((p) => p.id === clerkUser.primaryPhoneNumberId)?.phoneNumber ?? null;
+
+  const [user] = await db
+    .insert(usersTable)
+    .values({ id: userId, name, email, phone })
+    .onConflictDoUpdate({
+      target: usersTable.id,
+      set: { name, email, updatedAt: new Date() },
+    })
+    .returning();
+  return user;
+}
+
+// GET /api/users/profile — auto-creates the row from Clerk on first access
 router.get("/users/profile", async (req, res): Promise<void> => {
   const { userId } = getAuth(req);
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   try {
-    const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
-    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+    let user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+
+    if (!user) {
+      user = await upsertUserFromClerk(userId);
+    }
 
     res.json({
       id: user.id,

@@ -1,19 +1,43 @@
+import { clerkClient } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable, cartItemsTable, productsTable, categoriesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 /**
+ * Ensures the user row exists in the DB. If not found, auto-creates it from Clerk.
+ */
+async function ensureUserRow(userId: string) {
+  const existing = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+  if (existing) return existing;
+
+  const clerkUser = await clerkClient.users.getUser(userId);
+  const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || "Usuário";
+  const email =
+    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress
+    ?? clerkUser.emailAddresses[0]?.emailAddress
+    ?? "";
+  const phone = clerkUser.phoneNumbers.find((p) => p.id === clerkUser.primaryPhoneNumberId)?.phoneNumber ?? null;
+
+  const [user] = await db
+    .insert(usersTable)
+    .values({ id: userId, name, email, phone })
+    .onConflictDoUpdate({
+      target: usersTable.id,
+      set: { name, email, updatedAt: new Date() },
+    })
+    .returning();
+  return user;
+}
+
+/**
  * Validates that the user's profile is complete enough to place an order.
- * Requires: name, email, and phone only.
- * Returns an error message string if incomplete, or null if complete.
+ * If no DB row exists yet, auto-creates it from Clerk data.
+ * Requires: name and email.
  */
 export async function validateProfileComplete(userId: string): Promise<string | null> {
-  const profileRows = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  const profile = profileRows[0] ?? null;
+  const profile = await ensureUserRow(userId);
 
-  const complete = profile && profile.name && profile.email;
-
-  if (!complete) {
+  if (!profile.name || !profile.email) {
     return "Perfil incompleto. Preencha seu nome e e-mail antes de finalizar a compra.";
   }
   return null;
@@ -24,8 +48,8 @@ export async function validateProfileComplete(userId: string): Promise<string | 
  * Returns an error message string if the rules are violated, or null if valid.
  *
  * Rules:
- *   - Móveis items require a complete shippingAddress.
- *   - All other orders may optionally include a shippingAddress (collected at checkout for all orders).
+ *   - Móveis/Eletrônicos items require a complete shippingAddress.
+ *   - All other orders may optionally include a shippingAddress.
  */
 export async function validateDeliveryMethod(
   userId: string,
