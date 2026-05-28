@@ -9,6 +9,8 @@ import { Logo } from "@/components/Logo";
 const categories = [
   { name: "Móveis", slug: "moveis" },
   { name: "Eletrônicos", slug: "eletronicos" },
+  { name: "Eletrodomésticos", slug: "eletrodomestico" },
+  { name: "Infantil", slug: "infantil" },
   { name: "Novidades", slug: "novidades" },
   { name: "Ofertas", slug: "ofertas" },
 ];
@@ -279,13 +281,13 @@ export function Header() {
 
       {/* Desktop navigation */}
       <nav className="bg-[#2E7D32] hidden sm:block">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-1">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4">
+          <div className="flex items-center overflow-x-auto scrollbar-none">
             {categories.map((cat) => (
               <Link
                 key={cat.slug}
                 href={`/products?category=${cat.slug}`}
-                className="px-4 py-2.5 text-white text-sm font-medium hover:bg-[#1B5E20] transition-colors rounded-sm"
+                className="px-3 lg:px-4 py-2.5 text-white text-xs lg:text-sm font-medium hover:bg-[#1B5E20] transition-colors rounded-sm whitespace-nowrap flex-shrink-0"
               >
                 {cat.name}
               </Link>

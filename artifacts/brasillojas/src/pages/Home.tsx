@@ -12,6 +12,7 @@ import bannerEletro from "@/assets/banner-eletro.png";
 import bannerSala from "@/assets/banner-sala.png";
 import catMoveis from "@/assets/cat-moveis.png";
 import catEletronicos from "@/assets/cat-eletronicos.png";
+import catEletrodomesticos from "@/assets/cat-eletrodomesticos.png";
 import catNovidades from "@/assets/cat-novidades.png";
 import catOfertas from "@/assets/cat-ofertas.png";
 
@@ -45,6 +46,8 @@ const banners = [
 const categoryGrid = [
   { name: "Móveis", slug: "moveis", description: "Sofás, camas e mais", image: catMoveis },
   { name: "Eletrônicos", slug: "eletronicos", description: "Tech e gadgets", image: catEletronicos },
+  { name: "Eletrodomésticos", slug: "eletrodomestico", description: "Geladeiras, fogões e mais", image: catEletrodomesticos },
+  { name: "Infantil", slug: "infantil", description: "Brinquedos e artigos infantis", image: "https://images.unsplash.com/photo-1535572290543-960a8046f5af?w=600&auto=format&fit=crop" },
   { name: "Novidades", slug: "novidades", description: "Chegou agora", image: catNovidades },
   { name: "Ofertas", slug: "ofertas", description: "10% off em produtos selecionados", image: catOfertas },
 ];
@@ -153,7 +156,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-gray-800 mb-5 uppercase tracking-wide">
               Compre por Categoria
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {categoryGrid.map((cat, i) => (
                 <motion.div
                   key={cat.slug}
