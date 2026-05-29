@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit, Trash2, Search, Package, ImagePlus, X, Upload } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Package, ImagePlus, X, Upload, FileText, Clock, RotateCcw } from "lucide-react";
 import {
   useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useListCategories,
   deleteProduct as deleteProductApi,
@@ -30,6 +30,55 @@ const emptyForm: ProductForm = {
   specifications: undefined,
 };
 
+const DRAFT_KEY = "brasillojas:product-draft";
+
+interface Draft {
+  form: ProductForm;
+  savedAt: string;
+}
+
+function loadDraft(): Draft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Draft;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(form: ProductForm) {
+  try {
+    const draft: Draft = { form, savedAt: new Date().toISOString() };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {}
+}
+
+function isDraftMeaningful(form: ProductForm): boolean {
+  return (
+    (form.name?.trim() ?? "") !== "" ||
+    (form.description?.trim() ?? "") !== "" ||
+    (form.imageUrl?.trim() ?? "") !== "" ||
+    form.price > 0 ||
+    form.categoryId > 0
+  );
+}
+
+function formatDraftTime(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -39,9 +88,13 @@ export default function ProductsPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingGalleryIdx, setUploadingGalleryIdx] = useState<number | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const mainImageInputRef = useRef<HTMLInputElement>(null);
   const galleryImageInputRef = useRef<HTMLInputElement>(null);
   const pendingGalleryIdxRef = useRef<number | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isNewProductRef = useRef(false);
 
   const { uploadFile } = useUpload();
 
@@ -54,13 +107,40 @@ export default function ProductsPage() {
 
   const products = data?.products ?? [];
 
+  const scheduleDraftSave = useCallback((nextForm: ProductForm) => {
+    if (!isNewProductRef.current) return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      if (isDraftMeaningful(nextForm)) {
+        saveDraft(nextForm);
+        setLastSavedAt(new Date().toISOString());
+      }
+    }, 500);
+  }, []);
+
+  function setFormAndSchedule(next: ProductForm) {
+    setForm(next);
+    scheduleDraftSave(next);
+  }
+
   function openCreate() {
+    const draft = loadDraft();
+    isNewProductRef.current = true;
     setEditProduct(null);
-    setForm(emptyForm);
+    if (draft && isDraftMeaningful(draft.form)) {
+      setForm(draft.form);
+      setLastSavedAt(draft.savedAt);
+      setShowDraftBanner(true);
+    } else {
+      setForm(emptyForm);
+      setLastSavedAt(null);
+      setShowDraftBanner(false);
+    }
     setShowForm(true);
   }
 
   function openEdit(product: Product) {
+    isNewProductRef.current = false;
     setEditProduct(product);
     setForm({
       name: product.name,
@@ -79,7 +159,25 @@ export default function ProductsPage() {
       maxInstallments: product.maxInstallments ?? 1,
       specifications: product.specifications ?? undefined,
     });
+    setLastSavedAt(null);
+    setShowDraftBanner(false);
     setShowForm(true);
+  }
+
+  function discardDraft() {
+    clearDraft();
+    setForm(emptyForm);
+    setLastSavedAt(null);
+    setShowDraftBanner(false);
+  }
+
+  function handleCloseForm() {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    if (isNewProductRef.current && isDraftMeaningful(form)) {
+      saveDraft(form);
+    }
+    setShowForm(false);
+    setShowDraftBanner(false);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -92,7 +190,13 @@ export default function ProductsPage() {
       });
     } else {
       createProduct.mutate({ data: formData }, {
-        onSuccess: () => { queryClient.invalidateQueries(); setShowForm(false); },
+        onSuccess: () => {
+          clearDraft();
+          queryClient.invalidateQueries();
+          setShowForm(false);
+          setLastSavedAt(null);
+          setShowDraftBanner(false);
+        },
       });
     }
   }
@@ -139,7 +243,7 @@ export default function ProductsPage() {
     const result = await uploadFile(file);
     setUploadingMain(false);
     if (result) {
-      setForm({ ...form, imageUrl: `/api/storage${result.objectPath}` });
+      setFormAndSchedule({ ...form, imageUrl: `/api/storage${result.objectPath}` });
     }
     e.target.value = "";
   }
@@ -152,7 +256,9 @@ export default function ProductsPage() {
     const result = await uploadFile(file);
     setUploadingGalleryIdx(null);
     if (result) {
-      updateImageUrl(idx, `/api/storage${result.objectPath}`);
+      const updated = [...(form.images ?? [])];
+      updated[idx] = `/api/storage${result.objectPath}`;
+      setFormAndSchedule({ ...form, images: updated });
     }
     e.target.value = "";
     pendingGalleryIdxRef.current = null;
@@ -160,24 +266,37 @@ export default function ProductsPage() {
 
   function addImageUrl() {
     if ((form.images ?? []).length >= 10) return;
-    setForm({ ...form, images: [...(form.images ?? []), ""] });
+    setFormAndSchedule({ ...form, images: [...(form.images ?? []), ""] });
   }
 
   function updateImageUrl(idx: number, value: string) {
     const updated = [...(form.images ?? [])];
     updated[idx] = value;
-    setForm({ ...form, images: updated });
+    setFormAndSchedule({ ...form, images: updated });
   }
 
   function removeImageUrl(idx: number) {
     const updated = (form.images ?? []).filter((_, i) => i !== idx);
-    setForm({ ...form, images: updated });
+    setFormAndSchedule({ ...form, images: updated });
   }
+
+  const hasDraftOnDisk = isDraftMeaningful(loadDraft()?.form ?? emptyForm);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Produtos</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-800">Produtos</h1>
+          {hasDraftOnDisk && !showForm && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-300 text-amber-700 text-xs font-semibold rounded-full hover:bg-amber-100 transition-colors"
+              title="Você tem um rascunho salvo"
+            >
+              <FileText size={12} /> Rascunho salvo
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {selectedProducts.size > 0 && (
             <button
@@ -314,7 +433,7 @@ export default function ProductsPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setShowForm(false)}
+              onClick={handleCloseForm}
             />
             <motion.div
               initial={{ opacity: 0, x: "100%" }}
@@ -322,12 +441,56 @@ export default function ProductsPage() {
               exit={{ opacity: 0, x: "100%" }}
               className="fixed right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl z-50 overflow-y-auto"
             >
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-800">{editProduct ? "Editar Produto" : "Novo Produto"}</h2>
-                <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-800">
-                  <X size={20} />
-                </button>
+              {/* Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h2 className="text-lg font-bold text-gray-800 truncate">
+                      {editProduct ? "Editar Produto" : "Novo Produto"}
+                    </h2>
+                    {!editProduct && lastSavedAt && (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">
+                        <Clock size={9} /> Salvo às {formatDraftTime(lastSavedAt)}
+                      </span>
+                    )}
+                  </div>
+                  <button onClick={handleCloseForm} className="text-gray-500 hover:text-gray-800 flex-shrink-0 ml-2">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Draft restore banner */}
+                <AnimatePresence>
+                  {showDraftBanner && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: "auto", marginTop: 10 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText size={14} className="text-amber-600 flex-shrink-0" />
+                          <p className="text-xs text-amber-800 font-medium">
+                            Rascunho restaurado
+                            {lastSavedAt && (
+                              <span className="font-normal text-amber-600"> — salvo às {formatDraftTime(lastSavedAt)}</span>
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={discardDraft}
+                          className="flex items-center gap-1 text-xs text-amber-700 hover:text-red-600 font-medium whitespace-nowrap flex-shrink-0 transition-colors"
+                        >
+                          <RotateCcw size={11} /> Descartar
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
+
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
                 {/* Basic fields */}
@@ -345,7 +508,7 @@ export default function ProductsPage() {
                     <input
                       type={type}
                       value={(form[key as keyof typeof form] as string | number | undefined) ?? ""}
-                      onChange={(e) => setForm({ ...form, [key]: type === "number" ? Number(e.target.value) : e.target.value })}
+                      onChange={(e) => setFormAndSchedule({ ...form, [key]: type === "number" ? Number(e.target.value) : e.target.value })}
                       required={required}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
                     />
@@ -357,7 +520,7 @@ export default function ProductsPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
                   <select
                     value={form.categoryId}
-                    onChange={(e) => setForm({ ...form, categoryId: parseInt(e.target.value, 10) })}
+                    onChange={(e) => setFormAndSchedule({ ...form, categoryId: parseInt(e.target.value, 10) })}
                     required
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
                   >
@@ -375,7 +538,7 @@ export default function ProductsPage() {
                     <input
                       type="text"
                       value={form.imageUrl}
-                      onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                      onChange={(e) => setFormAndSchedule({ ...form, imageUrl: e.target.value })}
                       required
                       placeholder="URL da imagem ou faça upload..."
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
@@ -450,7 +613,7 @@ export default function ProductsPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Descricao</label>
                   <textarea
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) => setFormAndSchedule({ ...form, description: e.target.value })}
                     required
                     rows={4}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
@@ -467,7 +630,7 @@ export default function ProductsPage() {
                       min={1}
                       max={24}
                       value={form.maxInstallments ?? 1}
-                      onChange={(e) => setForm({ ...form, maxInstallments: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                      onChange={(e) => setFormAndSchedule({ ...form, maxInstallments: Math.max(1, parseInt(e.target.value, 10) || 1) })}
                       className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#1B5E20]"
                     />
                     <span className="text-sm text-gray-500">vezes (sem juros no cartão)</span>
@@ -476,11 +639,11 @@ export default function ProductsPage() {
 
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} className="rounded border-gray-300 text-[#1B5E20]" />
+                    <input type="checkbox" checked={form.isFeatured} onChange={(e) => setFormAndSchedule({ ...form, isFeatured: e.target.checked })} className="rounded border-gray-300 text-[#1B5E20]" />
                     <span className="text-sm text-gray-700">Produto em destaque</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="rounded border-gray-300 text-[#1B5E20]" />
+                    <input type="checkbox" checked={form.isActive} onChange={(e) => setFormAndSchedule({ ...form, isActive: e.target.checked })} className="rounded border-gray-300 text-[#1B5E20]" />
                     <span className="text-sm text-gray-700">Produto ativo</span>
                   </label>
                 </div>
@@ -495,12 +658,18 @@ export default function ProductsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
+                    onClick={handleCloseForm}
                     className="px-6 py-3 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
                   >
                     Cancelar
                   </button>
                 </div>
+
+                {!editProduct && (
+                  <p className="text-center text-xs text-gray-400">
+                    O formulário é salvo automaticamente como rascunho enquanto você preenche.
+                  </p>
+                )}
               </form>
             </motion.div>
           </>
