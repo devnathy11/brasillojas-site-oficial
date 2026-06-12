@@ -1,0 +1,1 @@
+{"version":3,"file":"updateUserProfileBody.d.ts","sourceRoot":"","sources":["../../../src/generated/types/updateUserProfileBody.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AACH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAEzC,MAAM,WAAW,qBAAqB;IACpC,IAAI,EAAE,MAAM,CAAC;IACb,KAAK,EAAE,MAAM,CAAC;IACd,KAAK,EAAE,MAAM,CAAC;IACd,OAAO,CAAC,EAAE,OAAO,GAAG,IAAI,CAAC;CAC1B"}

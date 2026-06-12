@@ -1,0 +1,7 @@
+# Liberar os scripts do Clerk e Esbuild que estavam travando o deploy
+allowed-build-scripts[]=@clerk/shared
+allowed-build-scripts[]=esbuild
+
+# Novas configurações de override aceitas pelo pnpm
+overrides.react=19.1.0
+overrides.react-dom=19.1.0

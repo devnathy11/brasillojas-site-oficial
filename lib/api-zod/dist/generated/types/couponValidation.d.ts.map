@@ -1,0 +1,1 @@
+{"version":3,"file":"couponValidation.d.ts","sourceRoot":"","sources":["../../../src/generated/types/couponValidation.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AACH,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,UAAU,CAAC;AAEvC,MAAM,WAAW,gBAAgB;IAC/B,KAAK,EAAE,OAAO,CAAC;IACf,MAAM,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;IACvB,OAAO,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;CACzB"}
